@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "./supabase";
 
 type Tour = Record<string, string | undefined>;
 
@@ -51,21 +53,7 @@ async function copiarTexto(texto: string, etiqueta: string) {
   }
 
   try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(texto);
-    } else {
-      const textarea = document.createElement("textarea");
-      textarea.value = texto;
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      textarea.style.top = "-9999px";
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
-
+    await navigator.clipboard.writeText(texto);
     alert(`${etiqueta} copiado ✅`);
   } catch (error) {
     console.error(error);
@@ -116,7 +104,76 @@ function ActionButton({ label, kind, onClick }: ActionButtonProps) {
   );
 }
 
+function LoginScreen() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loadingLogin, setLoadingLogin] = useState(false);
+  const [loginError, setLoginError] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    setLoadingLogin(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setLoginError("Correo o contraseña incorrectos.");
+    }
+
+    setLoadingLogin(false);
+  };
+
+  return (
+    <div style={styles.loginPage}>
+      <div style={styles.loginCard}>
+        <img
+          src="/logoweb.png"
+          alt="Tu Próximo Viaje MX"
+          style={styles.loginLogo}
+        />
+
+        <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
+        <h1 style={styles.loginTitle}>Acceso para agencias</h1>
+        <p style={styles.loginSubtitle}>
+          Ingresa con tu correo y contraseña para consultar el catálogo privado.
+        </p>
+
+        <form onSubmit={handleLogin} style={styles.loginForm}>
+          <input
+            type="email"
+            placeholder="Correo electrónico"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={styles.input}
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={styles.input}
+            required
+          />
+
+          <button type="submit" style={styles.loginButton} disabled={loadingLogin}>
+            {loadingLogin ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
+
+        {loginError ? <p style={styles.loginError}>{loginError}</p> : null}
+      </div>
+    </div>
+  );
+}
+
 function App() {
+  const [session, setSession] = useState<Session | null>(null);
   const [tours, setTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -124,6 +181,22 @@ function App() {
   const [estado, setEstado] = useState("");
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
+
     const cargarTours = async () => {
       try {
         setLoading(true);
@@ -145,7 +218,7 @@ function App() {
     };
 
     void cargarTours();
-  }, []);
+  }, [session]);
 
   const estados = useMemo(() => {
     return Array.from(
@@ -203,25 +276,40 @@ function App() {
     });
   }, [tours, busqueda, estado]);
 
+  if (!session) {
+    return <LoginScreen />;
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <div style={styles.header}>
-          <div style={styles.brandBlock}>
-            <img
-              src="/logoweb.png"
-              alt="Tu Próximo Viaje MX"
-              style={styles.logo}
-            />
+        <div style={styles.topBar}>
+          <div style={styles.header}>
+            <div style={styles.brandBlock}>
+              <img
+                src="/logoweb.png"
+                alt="Tu Próximo Viaje MX"
+                style={styles.logo}
+              />
 
-            <div>
-              <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
-              <h1 style={styles.title}>INDEX TPVMX</h1>
-              <p style={styles.subtitle}>
-                Catálogo interno para ventas, diseño y operación.
-              </p>
+              <div>
+                <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
+                <h1 style={styles.title}>INDEX TPVMX</h1>
+                <p style={styles.subtitle}>
+                  Catálogo interno para ventas, diseño y operación.
+                </p>
+              </div>
             </div>
           </div>
+
+          <button
+            style={styles.logoutButton}
+            onClick={async () => {
+              await supabase.auth.signOut();
+            }}
+          >
+            Cerrar sesión
+          </button>
         </div>
 
         <div style={styles.filtersBox}>
@@ -255,7 +343,6 @@ function App() {
         </div>
 
         {loading && <div style={styles.infoBox}>Cargando tours...</div>}
-
         {!loading && error && <div style={styles.errorBox}>{error}</div>}
 
         {!loading && !error && toursFiltrados.length === 0 && (
@@ -403,6 +490,13 @@ const styles = {
     maxWidth: "1200px",
     margin: "0 auto",
   },
+  topBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "16px",
+    marginBottom: "12px",
+  },
   header: {
     display: "flex",
     justifyContent: "space-between",
@@ -443,6 +537,15 @@ const styles = {
     margin: 0,
     color: "#547085",
     fontSize: "15px",
+  },
+  logoutButton: {
+    border: "1px solid #d8eef2",
+    background: "#ffffff",
+    color: "#0f6faf",
+    borderRadius: "14px",
+    padding: "12px 16px",
+    fontWeight: 700,
+    cursor: "pointer",
   },
   filtersBox: {
     display: "grid",
@@ -686,6 +789,63 @@ const styles = {
     cursor: "pointer",
     transform: "translateY(-2px)",
     transition: "all 0.2s ease",
+  },
+  loginPage: {
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background:
+      "linear-gradient(135deg, #f4fbfb 0%, #ffffff 42%, #eef7fb 100%)",
+    padding: "24px",
+  },
+  loginCard: {
+    width: "100%",
+    maxWidth: "430px",
+    background: "#ffffff",
+    borderRadius: "28px",
+    padding: "32px",
+    boxShadow: "0 20px 40px rgba(18, 50, 74, 0.10)",
+    border: "1px solid #d9ecef",
+    textAlign: "center" as const,
+  },
+  loginLogo: {
+    width: "100px",
+    height: "100px",
+    objectFit: "contain",
+    marginBottom: "12px",
+  },
+  loginTitle: {
+    margin: "8px 0",
+    fontSize: "30px",
+    color: "#0f3150",
+    fontWeight: 800,
+  },
+  loginSubtitle: {
+    margin: "0 0 22px 0",
+    color: "#547085",
+    fontSize: "15px",
+    lineHeight: 1.5,
+  },
+  loginForm: {
+    display: "grid",
+    gap: "14px",
+  },
+  loginButton: {
+    border: "none",
+    borderRadius: "16px",
+    padding: "14px",
+    background: "#d81b60",
+    color: "#fff",
+    fontWeight: 800,
+    cursor: "pointer",
+    fontSize: "15px",
+  },
+  loginError: {
+    marginTop: "14px",
+    color: "#b11658",
+    fontWeight: 700,
+    fontSize: "14px",
   },
 } satisfies Record<string, import("react").CSSProperties>;
 
