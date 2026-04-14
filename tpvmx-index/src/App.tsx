@@ -672,6 +672,5 @@ const styles = {
     transform: "translateY(-2px)",
     transition: "all 0.2s ease",
   },
-};
-
+} satisfies Record<string, import("react").CSSProperties>;
 export default App;
