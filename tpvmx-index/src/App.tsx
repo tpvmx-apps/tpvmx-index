@@ -90,15 +90,15 @@ function ActionButton({ label, kind, onClick }: ActionButtonProps) {
     kind === "primary"
       ? styles.primaryButton
       : kind === "secondary"
-      ? styles.secondaryButton
-      : styles.ghostButton;
+        ? styles.secondaryButton
+        : styles.ghostButton;
 
   const hoverStyle =
     kind === "primary"
       ? styles.primaryButtonHover
       : kind === "secondary"
-      ? styles.secondaryButtonHover
-      : styles.ghostButtonHover;
+        ? styles.secondaryButtonHover
+        : styles.ghostButtonHover;
 
   return (
     <button
@@ -133,12 +133,6 @@ function App() {
         if (!res.ok) throw new Error("No se pudo leer Google Sheets");
 
         const data = await res.json();
-        console.log("Primer tour:", data?.[0]);
-        console.log(
-          "Encabezados del primer tour:",
-          Object.keys(data?.[0] || {})
-        );
-
         setTours(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
@@ -213,12 +207,20 @@ function App() {
     <div style={styles.page}>
       <div style={styles.container}>
         <div style={styles.header}>
-          <div>
-            <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
-            <h1 style={styles.title}>INDEX TPVMX</h1>
-            <p style={styles.subtitle}>
-              Catálogo interno para ventas, diseño y operación.
-            </p>
+          <div style={styles.brandBlock}>
+            <img
+              src="/logoweb.png"
+              alt="Tu Próximo Viaje MX"
+              style={styles.logo}
+            />
+
+            <div>
+              <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
+              <h1 style={styles.title}>INDEX TPVMX</h1>
+              <p style={styles.subtitle}>
+                Catálogo interno para ventas, diseño y operación.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -285,7 +287,6 @@ function App() {
                 ]) || "Por definir";
 
               const precio = formatearMoneda(getField(tour, ["PRECIO", "O"]));
-
               const reserva = formatearMoneda(getField(tour, ["RESERVA", "P"]));
 
               const copyLimpio =
@@ -409,6 +410,20 @@ const styles = {
     gap: "16px",
     marginBottom: "24px",
   },
+  brandBlock: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+  },
+  logo: {
+    width: "90px",
+    height: "90px",
+    objectFit: "contain",
+    borderRadius: "16px",
+    background: "#ffffff",
+    padding: "6px",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
+  },
   brand: {
     margin: 0,
     fontSize: "12px",
@@ -464,7 +479,7 @@ const styles = {
     display: "flex",
     gap: "10px",
     alignItems: "center",
-    flexWrap: "wrap",
+    flexWrap: "wrap" as const,
     marginBottom: "18px",
   },
   metaBadge: {
@@ -571,7 +586,7 @@ const styles = {
   },
   valuePre: {
     margin: 0,
-    whiteSpace: "pre-line",
+    whiteSpace: "pre-line" as const,
     color: "#0f3150",
     fontSize: "15px",
     lineHeight: 1.45,
@@ -673,4 +688,5 @@ const styles = {
     transition: "all 0.2s ease",
   },
 } satisfies Record<string, import("react").CSSProperties>;
+
 export default App;
