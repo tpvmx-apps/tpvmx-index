@@ -1,5 +1,5 @@
-import { CSSProperties, useEffect, useMemo, useState } from "react";
-
+import { useState } from "react";
+import type { CSSProperties } from "react";
 type Tour = Record<string, string | undefined>;
 
 const SHEET_URL =
