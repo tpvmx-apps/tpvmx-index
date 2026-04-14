@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 type Tour = Record<string, string | undefined>;
 
 const SHEET_URL =
@@ -134,7 +134,10 @@ function App() {
 
         const data = await res.json();
         console.log("Primer tour:", data?.[0]);
-        console.log("Encabezados del primer tour:", Object.keys(data?.[0] || {}));
+        console.log(
+          "Encabezados del primer tour:",
+          Object.keys(data?.[0] || {})
+        );
 
         setTours(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -147,16 +150,12 @@ function App() {
       }
     };
 
-    cargarTours();
+    void cargarTours();
   }, []);
 
   const estados = useMemo(() => {
     return Array.from(
-      new Set(
-        tours
-          .map((tour) => getField(tour, ["ESTADO"]))
-          .filter(Boolean)
-      )
+      new Set(tours.map((tour) => getField(tour, ["ESTADO"])).filter(Boolean))
     ).sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
   }, [tours]);
 
@@ -166,7 +165,12 @@ function App() {
         getField(tour, ["CLAVE"]),
         getField(tour, ["TOUR"]),
         getField(tour, ["ESTADO"]),
-        getField(tour, ["Fecha Bot", "FECHA BOT", "FECHA_BOT", "PRÓXIMAS_FECHAS"]),
+        getField(tour, [
+          "Fecha Bot",
+          "FECHA BOT",
+          "FECHA_BOT",
+          "PRÓXIMAS_FECHAS",
+        ]),
       ]
         .join(" ")
         .toLowerCase();
@@ -280,17 +284,12 @@ function App() {
                   "PROXIMAS_FECHAS",
                 ]) || "Por definir";
 
-              const precio = formatearMoneda(
-                getField(tour, ["PRECIO", "O"])
-              );
+              const precio = formatearMoneda(getField(tour, ["PRECIO", "O"]));
 
-              const reserva = formatearMoneda(
-                getField(tour, ["RESERVA", "P"])
-              );
+              const reserva = formatearMoneda(getField(tour, ["RESERVA", "P"]));
 
               const copyLimpio =
                 getField(tour, [
-                  "COPYS LIMPIOS",
                   "COPYS LIMPIOS",
                   "COPY LIMPIO",
                   "COPY LIMPIOS",
@@ -302,7 +301,6 @@ function App() {
 
               const copyEmojis =
                 getField(tour, [
-                  "COPYS EMOJIS",
                   "COPYS EMOJIS",
                   "COPY EMOJIS",
                   "COPY_EMOJIS",
@@ -390,7 +388,7 @@ function App() {
   );
 }
 
-const styles: Record<string, CSSProperties> = {
+const styles = {
   page: {
     minHeight: "100vh",
     background:
