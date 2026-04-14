@@ -187,8 +187,8 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      setSession(currentSession);
     });
 
     return () => subscription.unsubscribe();
@@ -238,6 +238,7 @@ function App() {
           "FECHA_BOT",
           "PRÓXIMAS_FECHAS",
         ]),
+        getField(tour, ["NIVEL DE DIFICULTAD", "DIFICULTAD", "NIVEL", "AB"]),
       ]
         .join(" ")
         .toLowerCase();
@@ -364,6 +365,14 @@ function App() {
                   "Q",
                 ]) || "";
 
+              const dificultad =
+                getField(tour, [
+                  "NIVEL DE DIFICULTAD",
+                  "DIFICULTAD",
+                  "NIVEL",
+                  "AB",
+                ]) || "";
+
               const fechas =
                 getField(tour, [
                   "Fecha Bot",
@@ -400,10 +409,17 @@ function App() {
               const resumen = [
                 nombre,
                 descripcion,
+                dificultad ? `Nivel de dificultad: ${dificultad}` : "",
                 `Estado: ${estadoTour}`,
                 `Próximas fechas:\n${fechas}`,
                 `Precio: ${precio}`,
                 `Reserva con: ${reserva}`,
+                "",
+                "INFORMES Y RESERVACIONES:",
+                "5520698845 (Cel y WhatsApp)",
+                "5650929234 (Cel y WhatsApp)",
+                "5535031950 (Cel y WhatsApp)",
+                "hola@tuproximoviaje.mx",
               ]
                 .filter(Boolean)
                 .join("\n\n");
@@ -428,6 +444,12 @@ function App() {
 
                   {descripcion ? (
                     <p style={styles.cardDescription}>{descripcion}</p>
+                  ) : null}
+
+                  {dificultad ? (
+                    <p style={styles.dificultad}>
+                      Nivel de dificultad: {dificultad}
+                    </p>
                   ) : null}
 
                   <div style={styles.block}>
@@ -671,10 +693,16 @@ const styles = {
     fontWeight: 800,
   },
   cardDescription: {
-    margin: "0 0 16px 0",
+    margin: "0 0 10px 0",
     color: "#4f6b7e",
     lineHeight: 1.5,
     fontSize: "14px",
+  },
+  dificultad: {
+    margin: "0 0 14px 0",
+    fontSize: "13px",
+    fontWeight: 800,
+    color: "#ff9800",
   },
   block: {
     marginBottom: "16px",
