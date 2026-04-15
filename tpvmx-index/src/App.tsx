@@ -3,9 +3,13 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 type Tour = Record<string, string | undefined>;
+type CanvaMes = Record<string, string | undefined>;
 
 const SHEET_URL =
   "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/CONTROL";
+
+const CANVA_URL =
+  "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/CANVA_MESES";
 
 function normalizarClave(texto: string) {
   return String(texto || "")
@@ -175,10 +179,12 @@ function LoginScreen() {
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [tours, setTours] = useState<Tour[]>([]);
+  const [plantillasCanva, setPlantillasCanva] = useState<CanvaMes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [estado, setEstado] = useState("");
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -198,24 +204,32 @@ function App() {
     if (!session) return;
 
     const cargarTours = async () => {
-      try {
-        setLoading(true);
-        setError("");
+  try {
+    setLoading(true);
+    setError("");
 
-        const res = await fetch(SHEET_URL);
-        if (!res.ok) throw new Error("No se pudo leer Google Sheets");
+    const [toursRes, canvaRes] = await Promise.all([
+      fetch(SHEET_URL),
+      fetch(CANVA_URL),
+    ]);
 
-        const data = await res.json();
-        setTours(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error(err);
-        setError(
-          "No pude cargar los tours desde Google Sheets. Revisa que el archivo esté compartido y que la hoja se llame CONTROL."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!toursRes.ok) throw new Error("No se pudo leer Google Sheets");
+    if (!canvaRes.ok) throw new Error("No se pudo leer la hoja CANVA_MESES");
+
+    const toursData = await toursRes.json();
+    const canvaData = await canvaRes.json();
+
+    setTours(Array.isArray(toursData) ? toursData : []);
+    setPlantillasCanva(Array.isArray(canvaData) ? canvaData : []);
+  } catch (err) {
+    console.error(err);
+    setError(
+      "No pude cargar los tours o las plantillas desde Google Sheets."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
     void cargarTours();
   }, [session]);
@@ -225,7 +239,19 @@ function App() {
       new Set(tours.map((tour) => getField(tour, ["ESTADO"])).filter(Boolean))
     ).sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
   }, [tours]);
-
+   const plantillasActivas = useMemo(() => {
+  return plantillasCanva
+    .filter((item) => {
+      const activo = (item.ACTIVO || "").toUpperCase().trim();
+      const link = (item.LINK || "").trim();
+      return activo === "SI" && link !== "";
+    })
+    .sort((a, b) => {
+      const ordenA = Number(a.ORDEN || 999);
+      const ordenB = Number(b.ORDEN || 999);
+      return ordenA - ordenB;
+    });
+}, [plantillasCanva]);
   const toursFiltrados = useMemo(() => {
     const filtrados = tours.filter((tour) => {
       const texto = [
@@ -313,6 +339,25 @@ function App() {
           </button>
         </div>
 
+  {plantillasActivas.length > 0 && (
+  <div style={styles.canvaSection}>
+    <p style={styles.canvaTitle}>Plantillas de diseño por mes</p>
+
+    <div style={styles.canvaButtons}>
+      {plantillasActivas.map((item, i) => (
+        <a
+          key={i}
+          href={item.LINK}
+          target="_blank"
+          rel="noreferrer"
+          style={styles.canvaButton}
+        >
+          {item.ETIQUETA || item.MES || "Ver plantilla"}
+        </a>
+      ))}
+    </div>
+  </div>
+)}
         <div style={styles.filtersBox}>
           <input
             type="text"
@@ -875,6 +920,40 @@ const styles = {
     fontWeight: 700,
     fontSize: "14px",
   },
+canvaSection: {
+  background: "#ffffff",
+  borderRadius: "20px",
+  padding: "18px",
+  marginBottom: "16px",
+  border: "1px solid #cfe9ea",
+  boxShadow: "0 10px 28px rgba(18, 50, 74, 0.06)",
+},
+
+canvaTitle: {
+  margin: "0 0 12px 0",
+  fontWeight: 800,
+  color: "#d81b60",
+  fontSize: "14px",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.05em",
+},
+
+canvaButtons: {
+  display: "flex",
+  gap: "10px",
+  flexWrap: "wrap" as const,
+},
+
+canvaButton: {
+  display: "inline-block",
+  padding: "10px 14px",
+  borderRadius: "12px",
+  background: "#dff2f4",
+  textDecoration: "none",
+  fontWeight: 700,
+  color: "#0f6faf",
+  border: "1px solid #a8d8df",
+},
 } satisfies Record<string, import("react").CSSProperties>;
 
 export default App;
