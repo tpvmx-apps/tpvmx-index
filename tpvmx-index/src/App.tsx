@@ -517,13 +517,13 @@ function App() {
                   <div style={styles.actions3}>
                     <ActionButton
                       kind="primary"
-                      label="Copiar copy limpio"
+                      label="Copiar copy agencia"
                       onClick={() => copiarTexto(copyLimpio, "copy limpio")}
                     />
 
                     <ActionButton
                       kind="secondary"
-                      label="Copiar copy emojis"
+                      label="Copiar copy TPVMX"
                       onClick={() => copiarTexto(copyEmojis, "copy con emojis")}
                     />
 
