@@ -378,10 +378,19 @@ function App() {
                 {e}
               </option>
             ))}
-          </select>
-        </div>
+         </select>
 
-        <div style={styles.metaRow}>
+<a
+  href="https://script.google.com/macros/s/AKfycbwnJWa-ZaC12TE-L9b_8V0yWUmpcLA2-GtTwPRgbQdYoSFYl3jtcox1TrOn_D27D5LS7Q/exec"
+  target="_blank"
+  rel="noopener noreferrer"
+  style={styles.availabilityButton}
+>
+  📊 Ver disponibilidad y ocupación 🟢🟡🔴
+</a>
+</div>
+
+<div style={styles.metaRow}>
           <span style={styles.metaBadge}>
             Tours encontrados: {toursFiltrados.length}
           </span>
@@ -635,6 +644,21 @@ const styles = {
     color: "#17354a",
     background: "#fbfefe",
   },
+
+  availabilityButton: {
+  gridColumn: "1 / -1",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "13px 18px",
+  borderRadius: "14px",
+  background: "#17bebb",
+  color: "#ffffff",
+  fontSize: "15px",
+  fontWeight: 700,
+  textDecoration: "none",
+  cursor: "pointer",
+},
   select: {
     width: "100%",
     padding: "14px 16px",
