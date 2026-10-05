@@ -630,6 +630,7 @@ function App() {
                     Object.assign(e.currentTarget.style, styles.card);
                   }}
                 >
+                  <div style={styles.cardAccent} aria-hidden="true" />
                   <div style={styles.cardTop}>
                     <span style={styles.claveBadge}>{clave || "—"}</span>
                     <span style={styles.estadoBadge}>{estadoTour}</span>
@@ -884,6 +885,8 @@ const styles = {
     gap: "18px",
   },
   card: {
+    position: "relative",
+    overflow: "hidden",
     background: "#ffffff",
     borderRadius: "26px",
     padding: "20px",
@@ -893,6 +896,8 @@ const styles = {
     transition: "all 0.2s ease",
   },
   cardHover: {
+    position: "relative",
+    overflow: "hidden",
     background: "#ffffff",
     borderRadius: "26px",
     padding: "20px",
@@ -950,6 +955,17 @@ const styles = {
     width: "100%",
     height: "100%",
     objectFit: "cover",
+  },
+  cardAccent: {
+    position: "absolute",
+    zIndex: 4,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "4px",
+    background:
+      "linear-gradient(90deg, #22B8B6 0%, #2D9CDB 48%, #E63B8D 100%)",
+    pointerEvents: "none",
   },
   cardTop: {
     display: "flex",
