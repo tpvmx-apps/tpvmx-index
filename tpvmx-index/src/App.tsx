@@ -120,96 +120,53 @@ function ActionButton({ label, kind, onClick }: ActionButtonProps) {
 }
 
 
-function TourGalleryPreview({
+function GalleryPage({
+  tourName,
   images,
-  alt,
 }: {
+  tourName: string;
   images: string[];
-  alt: string;
 }) {
-  const cleanImages = useMemo(
-    () =>
-      Array.from(
-        new Set(images.map((image) => String(image || "").trim()).filter(Boolean))
-      ),
-    [images]
+  const cleanImages = Array.from(
+    new Set(images.map((image) => String(image || "").trim()).filter(Boolean))
   );
-  const [index, setIndex] = useState(0);
-
-  if (cleanImages.length === 0) return null;
-
-  const activeIndex = Math.min(index, cleanImages.length - 1);
-  const activeImage = cleanImages[activeIndex];
-
-  const move = (step: number) => {
-    setIndex((current) => {
-      const next = current + step;
-      if (next < 0) return cleanImages.length - 1;
-      if (next >= cleanImages.length) return 0;
-      return next;
-    });
-  };
 
   return (
-    <div style={styles.gallery}>
-      <div style={styles.galleryStage}>
-        <a
-          href={activeImage}
-          target="_blank"
-          rel="noreferrer"
-          style={styles.galleryImageLink}
-          title="Abrir fotografía"
-        >
-          <img
-            src={activeImage}
-            alt={`${alt} · foto ${activeIndex + 1}`}
-            style={styles.galleryImage}
-            loading="lazy"
-          />
+    <div style={styles.galleryPage}>
+      <div style={styles.galleryPageContainer}>
+        <a href={window.location.pathname} style={styles.galleryBackLink}>
+          ← Volver al INDEX
         </a>
 
-        {cleanImages.length > 1 ? (
-          <>
-            <button
-              type="button"
-              aria-label="Foto anterior"
-              onClick={() => move(-1)}
-              style={{ ...styles.galleryArrow, left: "10px" }}
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              aria-label="Foto siguiente"
-              onClick={() => move(1)}
-              style={{ ...styles.galleryArrow, right: "10px" }}
-            >
-              ›
-            </button>
-          </>
-        ) : null}
+        <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
+        <h1 style={styles.galleryPageTitle}>Galería de fotos</h1>
+        <p style={styles.galleryPageSubtitle}>{tourName}</p>
 
-        <span style={styles.galleryCounter}>
-          {activeIndex + 1}/{cleanImages.length}
-        </span>
+        {cleanImages.length === 0 ? (
+          <div style={styles.infoBox}>
+            Este tour todavía no tiene fotografías disponibles.
+          </div>
+        ) : (
+          <div style={styles.galleryGrid}>
+            {cleanImages.map((image, index) => (
+              <a
+                key={image}
+                href={image}
+                target="_blank"
+                rel="noreferrer"
+                style={styles.galleryTile}
+              >
+                <img
+                  src={image}
+                  alt={`${tourName} · foto ${index + 1}`}
+                  style={styles.galleryTileImage}
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
-
-      {cleanImages.length > 1 ? (
-        <div style={styles.galleryDots}>
-          {cleanImages.map((image, dotIndex) => (
-            <button
-              key={image}
-              type="button"
-              aria-label={`Ver foto ${dotIndex + 1}`}
-              onClick={() => setIndex(dotIndex)}
-              style={{
-                ...styles.galleryDot,
-                ...(dotIndex === activeIndex ? styles.galleryDotActive : {}),
-              }}
-            />
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -291,7 +248,10 @@ function App() {
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [estado, setEstado] = useState("");
-
+  const galleryKey = useMemo(
+    () => new URLSearchParams(window.location.search).get("galeria") || "",
+    []
+  );
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -471,6 +431,32 @@ function App() {
 
   if (!session) {
     return <LoginScreen />;
+  }
+
+  if (galleryKey) {
+    const normalizedGalleryKey = normalizarClave(galleryKey);
+    const galleryImages = galeriasPorClave.get(normalizedGalleryKey) || [];
+    const galleryTour = tours.find(
+      (tour) => normalizarClave(getField(tour, ["CLAVE"])) === normalizedGalleryKey
+    );
+    const galleryName =
+      (galleryTour && getField(galleryTour, ["TOUR"])) ||
+      galerias.find(
+        (item) => normalizarClave(item.tourKey) === normalizedGalleryKey
+      )?.tourName ||
+      galleryKey;
+
+    if (loading) {
+      return (
+        <div style={styles.page}>
+          <div style={styles.container}>
+            <div style={styles.infoBox}>Cargando galería...</div>
+          </div>
+        </div>
+      );
+    }
+
+    return <GalleryPage tourName={galleryName} images={galleryImages} />;
   }
 
   return (
@@ -657,14 +643,23 @@ function App() {
                     Object.assign(e.currentTarget.style, styles.card);
                   }}
                 >
-                  <TourGalleryPreview images={galleryImages} alt={nombre} />
-
                   <div style={styles.cardTop}>
                     <span style={styles.claveBadge}>{clave || "—"}</span>
                     <span style={styles.estadoBadge}>{estadoTour}</span>
                   </div>
 
                   <h2 style={styles.cardTitle}>{nombre}</h2>
+
+                  {galleryImages.length > 0 ? (
+                    <a
+                      href={`?galeria=${encodeURIComponent(clave)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={styles.galleryLink}
+                    >
+                      📷 Galería de fotos
+                    </a>
+                  ) : null}
 
                   {descripcion ? (
                     <p style={styles.cardDescription}>{descripcion}</p>
@@ -900,74 +895,65 @@ const styles = {
     transform: "translateY(-4px)",
     transition: "all 0.2s ease",
   },
-  gallery: {
-    margin: "-4px -4px 16px -4px",
+  galleryLink: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    margin: "0 0 12px 0",
+    color: "#0f6faf",
+    fontSize: "13px",
+    fontWeight: 800,
+    textDecoration: "none",
   },
-  galleryStage: {
-    position: "relative",
-    overflow: "hidden",
-    borderRadius: "20px",
-    background: "#eaf4f6",
-    aspectRatio: "16 / 9",
-    boxShadow: "inset 0 0 0 1px rgba(15, 111, 175, 0.08)",
+  galleryPage: {
+    minHeight: "100vh",
+    background:
+      "linear-gradient(135deg, #f4fbfb 0%, #ffffff 42%, #eef7fb 100%)",
+    padding: "28px",
+    color: "#17354a",
+    fontFamily:
+      "Arial, Helvetica, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   },
-  galleryImageLink: {
+  galleryPageContainer: {
+    maxWidth: "1100px",
+    margin: "0 auto",
+  },
+  galleryBackLink: {
+    display: "inline-block",
+    marginBottom: "22px",
+    color: "#0f6faf",
+    fontWeight: 800,
+    textDecoration: "none",
+  },
+  galleryPageTitle: {
+    margin: "6px 0",
+    fontSize: "34px",
+    color: "#0f3150",
+    fontWeight: 800,
+  },
+  galleryPageSubtitle: {
+    margin: "0 0 22px 0",
+    color: "#547085",
+    fontSize: "17px",
+  },
+  galleryGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    gap: "16px",
+  },
+  galleryTile: {
     display: "block",
-    width: "100%",
-    height: "100%",
+    overflow: "hidden",
+    borderRadius: "18px",
+    background: "#eaf4f6",
+    aspectRatio: "4 / 3",
+    border: "1px solid #d9ecef",
   },
-  galleryImage: {
+  galleryTileImage: {
     display: "block",
     width: "100%",
     height: "100%",
     objectFit: "cover",
-  },
-  galleryArrow: {
-    position: "absolute",
-    top: "50%",
-    transform: "translateY(-50%)",
-    width: "36px",
-    height: "36px",
-    borderRadius: "999px",
-    border: "1px solid rgba(255,255,255,0.72)",
-    background: "rgba(15,49,80,0.72)",
-    color: "#ffffff",
-    fontSize: "25px",
-    lineHeight: 1,
-    cursor: "pointer",
-    display: "grid",
-    placeItems: "center",
-    boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
-  },
-  galleryCounter: {
-    position: "absolute",
-    right: "10px",
-    bottom: "10px",
-    padding: "6px 9px",
-    borderRadius: "999px",
-    background: "rgba(15,49,80,0.76)",
-    color: "#ffffff",
-    fontSize: "12px",
-    fontWeight: 800,
-  },
-  galleryDots: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "6px",
-    marginTop: "9px",
-  },
-  galleryDot: {
-    width: "7px",
-    height: "7px",
-    borderRadius: "999px",
-    border: "none",
-    padding: 0,
-    background: "#c6dce1",
-    cursor: "pointer",
-  },
-  galleryDotActive: {
-    width: "20px",
-    background: "#d81b60",
   },
   cardTop: {
     display: "flex",
