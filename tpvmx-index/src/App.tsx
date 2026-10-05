@@ -4,12 +4,23 @@ import { supabase } from "./supabase";
 
 type Tour = Record<string, string | undefined>;
 type CanvaMes = Record<string, string | undefined>;
+type GalleryItem = {
+  tourKey: string;
+  tourName?: string;
+  images: string[];
+};
 
 const SHEET_URL =
   "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/CONTROL";
 
 const CANVA_URL =
   "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/CANVA_MESES";
+
+const GALLERY_API_URL =
+  "https://tuproximoviaje.mx/api/gallery";
+
+const GALLERY_BACKUP_URL =
+  "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/GALERIA_WEB_BACKUP";
 
 function normalizarClave(texto: string) {
   return String(texto || "")
@@ -73,24 +84,18 @@ function formatearMoneda(valor: string) {
 
 type ActionButtonProps = {
   label: string;
-  kind: "primary" | "secondary" | "ghost";
+  kind: "primary" | "secondary";
   onClick: () => void;
 };
 
 function ActionButton({ label, kind, onClick }: ActionButtonProps) {
   const baseStyle =
-    kind === "primary"
-      ? styles.primaryButton
-      : kind === "secondary"
-        ? styles.secondaryButton
-        : styles.ghostButton;
+    kind === "primary" ? styles.primaryButton : styles.secondaryButton;
 
   const hoverStyle =
     kind === "primary"
       ? styles.primaryButtonHover
-      : kind === "secondary"
-        ? styles.secondaryButtonHover
-        : styles.ghostButtonHover;
+      : styles.secondaryButtonHover;
 
   return (
     <button
@@ -105,6 +110,58 @@ function ActionButton({ label, kind, onClick }: ActionButtonProps) {
     >
       {label}
     </button>
+  );
+}
+
+
+function GalleryPage({
+  tourName,
+  images,
+}: {
+  tourName: string;
+  images: string[];
+}) {
+  const cleanImages = Array.from(
+    new Set(images.map((image) => String(image || "").trim()).filter(Boolean))
+  );
+
+  return (
+    <div style={styles.galleryPage}>
+      <div style={styles.galleryPageContainer}>
+        <a href={window.location.pathname} style={styles.galleryBackLink}>
+          ← Volver al INDEX
+        </a>
+
+        <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
+        <h1 style={styles.galleryPageTitle}>Galería de fotos</h1>
+        <p style={styles.galleryPageSubtitle}>{tourName}</p>
+
+        {cleanImages.length === 0 ? (
+          <div style={styles.infoBox}>
+            Este tour todavía no tiene fotografías disponibles.
+          </div>
+        ) : (
+          <div style={styles.galleryGrid}>
+            {cleanImages.map((image, index) => (
+              <a
+                key={image}
+                href={image}
+                target="_blank"
+                rel="noreferrer"
+                style={styles.galleryTile}
+              >
+                <img
+                  src={image}
+                  alt={`${tourName} · foto ${index + 1}`}
+                  style={styles.galleryTileImage}
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -180,11 +237,17 @@ function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [tours, setTours] = useState<Tour[]>([]);
   const [plantillasCanva, setPlantillasCanva] = useState<CanvaMes[]>([]);
+  const [galerias, setGalerias] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [estado, setEstado] = useState("");
-
+  const [descripcionesAbiertas, setDescripcionesAbiertas] = useState<Record<string, boolean>>({});
+  const [fechasAbiertas, setFechasAbiertas] = useState<Record<string, boolean>>({});
+  const galleryKey = useMemo(
+    () => new URLSearchParams(window.location.search).get("galeria") || "",
+    []
+  );
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -221,6 +284,54 @@ function App() {
 
     setTours(Array.isArray(toursData) ? toursData : []);
     setPlantillasCanva(Array.isArray(canvaData) ? canvaData : []);
+
+    try {
+      const galleryRes = await fetch(GALLERY_API_URL);
+
+      if (galleryRes.ok) {
+        const galleryData = await galleryRes.json();
+        const galleryItems = Array.isArray(galleryData?.galleries)
+          ? galleryData.galleries
+          : [];
+
+        setGalerias(galleryItems);
+      } else {
+        throw new Error("Feed maestro de galerías no disponible");
+      }
+    } catch (galleryError) {
+      console.warn(
+        "No se pudo cargar el feed maestro; usando respaldo de galerías.",
+        galleryError
+      );
+
+      try {
+        const backupRes = await fetch(GALLERY_BACKUP_URL);
+        if (!backupRes.ok) throw new Error("Respaldo de galerías no disponible");
+
+        const backupData = await backupRes.json();
+        const backupRows = Array.isArray(backupData) ? backupData : [];
+
+        setGalerias(
+          backupRows
+            .map((row: Tour) => ({
+              tourKey: getField(row, ["CLAVE"]),
+              tourName: getField(row, ["TOUR"]),
+              images: [1, 2, 3, 4, 5]
+                .map((photoIndex) =>
+                  getField(row, [
+                    `FOTO_${photoIndex}`,
+                    `FOTO ${photoIndex}`,
+                  ])
+                )
+                .filter(Boolean),
+            }))
+            .filter((item: GalleryItem) => item.tourKey)
+        );
+      } catch (backupError) {
+        console.warn("Tampoco se pudo cargar el respaldo de galerías.", backupError);
+        setGalerias([]);
+      }
+    }
   } catch (err) {
     console.error(err);
     setError(
@@ -252,6 +363,17 @@ function App() {
       return ordenA - ordenB;
     });
 }, [plantillasCanva]);
+  const galeriasPorClave = useMemo(() => {
+    const mapa = new Map<string, string[]>();
+
+    galerias.forEach((item) => {
+      const key = normalizarClave(item.tourKey);
+      if (key) mapa.set(key, Array.isArray(item.images) ? item.images : []);
+    });
+
+    return mapa;
+  }, [galerias]);
+
   const toursFiltrados = useMemo(() => {
     const filtrados = tours.filter((tour) => {
       const texto = [
@@ -305,6 +427,32 @@ function App() {
 
   if (!session) {
     return <LoginScreen />;
+  }
+
+  if (galleryKey) {
+    const normalizedGalleryKey = normalizarClave(galleryKey);
+    const galleryImages = galeriasPorClave.get(normalizedGalleryKey) || [];
+    const galleryTour = tours.find(
+      (tour) => normalizarClave(getField(tour, ["CLAVE"])) === normalizedGalleryKey
+    );
+    const galleryName =
+      (galleryTour && getField(galleryTour, ["TOUR"])) ||
+      galerias.find(
+        (item) => normalizarClave(item.tourKey) === normalizedGalleryKey
+      )?.tourName ||
+      galleryKey;
+
+    if (loading) {
+      return (
+        <div style={styles.page}>
+          <div style={styles.container}>
+            <div style={styles.infoBox}>Cargando galería...</div>
+          </div>
+        </div>
+      );
+    }
+
+    return <GalleryPage tourName={galleryName} images={galleryImages} />;
   }
 
   return (
@@ -380,21 +528,12 @@ function App() {
             ))}
          </select>
 
-<a
-  href="https://script.google.com/macros/s/AKfycbwnJWa-ZaC12TE-L9b_8V0yWUmpcLA2-GtTwPRgbQdYoSFYl3jtcox1TrOn_D27D5LS7Q/exec"
-  target="_blank"
-  rel="noopener noreferrer"
-  style={styles.availabilityButton}
->
-  📊 Ver disponibilidad y ocupación 🟢🟡🔴
-</a>
 </div>
 
 <div style={styles.metaRow}>
           <span style={styles.metaBadge}>
             Tours encontrados: {toursFiltrados.length}
           </span>
-          <span style={styles.metaBadgeSecondary}>Fuente: CONTROL</span>
         </div>
 
         {loading && <div style={styles.infoBox}>Cargando tours...</div>}
@@ -438,6 +577,8 @@ function App() {
 
               const precio = formatearMoneda(getField(tour, ["PRECIO", "O"]));
               const reserva = formatearMoneda(getField(tour, ["RESERVA", "P"]));
+              const galleryImages =
+                galeriasPorClave.get(normalizarClave(clave)) || [];
 
               const copyLimpio =
                 getField(tour, [
@@ -460,23 +601,23 @@ function App() {
                   "AL",
                 ]) || "";
 
-              const resumen = [
-                nombre,
-                descripcion,
-                dificultad ? `Nivel de dificultad: ${dificultad}` : "",
-                `Estado: ${estadoTour}`,
-                `Próximas fechas:\n${fechas}`,
-                `Precio: ${precio}`,
-                `Reserva con: ${reserva}`,
-                "",
-                "INFORMES Y RESERVACIONES:",
-                "5520698845 (Cel y WhatsApp)",
-                "5650929234 (Cel y WhatsApp)",
-                "5535031950 (Cel y WhatsApp)",
-                "hola@tuproximoviaje.mx",
-              ]
-                .filter(Boolean)
-                .join("\n\n");
+              const cardKey = normalizarClave(clave || nombre);
+              const descripcionLarga = descripcion.length > 180;
+              const descripcionVisible =
+                descripcionLarga && !descripcionesAbiertas[cardKey]
+                  ? `${descripcion.slice(0, 180).trim()}…`
+                  : descripcion;
+
+              const lineasFecha = fechas
+                .split(/\r?\n/)
+                .map((linea) => linea.trim())
+                .filter(Boolean);
+              const tieneMuchasFechas = lineasFecha.length > 3;
+              const fechasVisibles =
+                tieneMuchasFechas && !fechasAbiertas[cardKey]
+                  ? lineasFecha.slice(0, 3)
+                  : lineasFecha;
+              const fechasRestantes = Math.max(0, lineasFecha.length - 3);
 
               return (
                 <div
@@ -489,6 +630,7 @@ function App() {
                     Object.assign(e.currentTarget.style, styles.card);
                   }}
                 >
+                  <div style={styles.cardAccent} aria-hidden="true" />
                   <div style={styles.cardTop}>
                     <span style={styles.claveBadge}>{clave || "—"}</span>
                     <span style={styles.estadoBadge}>{estadoTour}</span>
@@ -497,7 +639,23 @@ function App() {
                   <h2 style={styles.cardTitle}>{nombre}</h2>
 
                   {descripcion ? (
-                    <p style={styles.cardDescription}>{descripcion}</p>
+                    <div style={styles.descriptionBlock}>
+                      <p style={styles.cardDescription}>{descripcionVisible}</p>
+                      {descripcionLarga ? (
+                        <button
+                          type="button"
+                          style={styles.inlineToggle}
+                          onClick={() =>
+                            setDescripcionesAbiertas((current) => ({
+                              ...current,
+                              [cardKey]: !current[cardKey],
+                            }))
+                          }
+                        >
+                          {descripcionesAbiertas[cardKey] ? "Ver menos" : "Ver más"}
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
 
                   {dificultad ? (
@@ -508,7 +666,27 @@ function App() {
 
                   <div style={styles.block}>
                     <p style={styles.label}>Próximas fechas</p>
-                    <p style={styles.valuePre}>{fechas}</p>
+                    <p style={styles.valuePre}>
+                      {fechasVisibles.length > 0
+                        ? fechasVisibles.join("\n")
+                        : "Por definir"}
+                    </p>
+                    {tieneMuchasFechas ? (
+                      <button
+                        type="button"
+                        style={styles.inlineToggle}
+                        onClick={() =>
+                          setFechasAbiertas((current) => ({
+                            ...current,
+                            [cardKey]: !current[cardKey],
+                          }))
+                        }
+                      >
+                        {fechasAbiertas[cardKey]
+                          ? "Ver menos fechas"
+                          : `+ ${fechasRestantes} fechas más`}
+                      </button>
+                    ) : null}
                   </div>
 
                   <div style={styles.priceRow}>
@@ -523,7 +701,7 @@ function App() {
                     </div>
                   </div>
 
-                  <div style={styles.actions3}>
+                  <div style={styles.actions2}>
                     <ActionButton
                       kind="primary"
                       label="Copiar copy agencia"
@@ -535,12 +713,28 @@ function App() {
                       label="Copiar copy TPVMX"
                       onClick={() => copiarTexto(copyEmojis, "copy con emojis")}
                     />
+                  </div>
 
-                    <ActionButton
-                      kind="ghost"
-                      label="Copiar resumen"
-                      onClick={() => copiarTexto(resumen, "resumen")}
-                    />
+                  <div style={styles.resourceLinks}>
+                    {galleryImages.length > 0 ? (
+                      <a
+                        href={`?galeria=${encodeURIComponent(clave)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={styles.resourceLink}
+                      >
+                        📷 Galería de fotos
+                      </a>
+                    ) : null}
+
+                    <a
+                      href="https://script.google.com/macros/s/AKfycbwnJWa-ZaC12TE-L9b_8V0yWUmpcLA2-GtTwPRgbQdYoSFYl3jtcox1TrOn_D27D5LS7Q/exec"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={styles.resourceLink}
+                    >
+                      🟢 Disponibilidad
+                    </a>
                   </div>
                 </div>
               );
@@ -645,20 +839,6 @@ const styles = {
     background: "#fbfefe",
   },
 
-  availabilityButton: {
-  gridColumn: "1 / -1",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "13px 18px",
-  borderRadius: "14px",
-  background: "#17bebb",
-  color: "#ffffff",
-  fontSize: "15px",
-  fontWeight: 700,
-  textDecoration: "none",
-  cursor: "pointer",
-},
   select: {
     width: "100%",
     padding: "14px 16px",
@@ -679,14 +859,6 @@ const styles = {
   metaBadge: {
     background: "#f9dbe8",
     color: "#b11658",
-    borderRadius: "999px",
-    padding: "9px 14px",
-    fontSize: "13px",
-    fontWeight: 800,
-  },
-  metaBadgeSecondary: {
-    background: "#d8eef2",
-    color: "#0f6faf",
     borderRadius: "999px",
     padding: "9px 14px",
     fontSize: "13px",
@@ -713,6 +885,8 @@ const styles = {
     gap: "18px",
   },
   card: {
+    position: "relative",
+    overflow: "hidden",
     background: "#ffffff",
     borderRadius: "26px",
     padding: "20px",
@@ -722,6 +896,8 @@ const styles = {
     transition: "all 0.2s ease",
   },
   cardHover: {
+    position: "relative",
+    overflow: "hidden",
     background: "#ffffff",
     borderRadius: "26px",
     padding: "20px",
@@ -729,6 +905,67 @@ const styles = {
     border: "1px solid #bfe2e7",
     transform: "translateY(-4px)",
     transition: "all 0.2s ease",
+  },
+  galleryPage: {
+    minHeight: "100vh",
+    background:
+      "linear-gradient(135deg, #f4fbfb 0%, #ffffff 42%, #eef7fb 100%)",
+    padding: "28px",
+    color: "#17354a",
+    fontFamily:
+      "Arial, Helvetica, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+  },
+  galleryPageContainer: {
+    maxWidth: "1100px",
+    margin: "0 auto",
+  },
+  galleryBackLink: {
+    display: "inline-block",
+    marginBottom: "22px",
+    color: "#0f6faf",
+    fontWeight: 800,
+    textDecoration: "none",
+  },
+  galleryPageTitle: {
+    margin: "6px 0",
+    fontSize: "34px",
+    color: "#0f3150",
+    fontWeight: 800,
+  },
+  galleryPageSubtitle: {
+    margin: "0 0 22px 0",
+    color: "#547085",
+    fontSize: "17px",
+  },
+  galleryGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    gap: "16px",
+  },
+  galleryTile: {
+    display: "block",
+    overflow: "hidden",
+    borderRadius: "18px",
+    background: "#eaf4f6",
+    aspectRatio: "4 / 3",
+    border: "1px solid #d9ecef",
+  },
+  galleryTileImage: {
+    display: "block",
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  cardAccent: {
+    position: "absolute",
+    zIndex: 4,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "4px",
+    background:
+      "linear-gradient(90deg, #22B8B6 0%, #2D9CDB 48%, #E63B8D 100%)",
+    pointerEvents: "none",
   },
   cardTop: {
     display: "flex",
@@ -761,11 +998,24 @@ const styles = {
     color: "#0f3150",
     fontWeight: 800,
   },
+  descriptionBlock: {
+    marginBottom: "10px",
+  },
   cardDescription: {
-    margin: "0 0 10px 0",
+    margin: 0,
     color: "#4f6b7e",
     lineHeight: 1.5,
     fontSize: "14px",
+  },
+  inlineToggle: {
+    marginTop: "5px",
+    padding: 0,
+    border: "none",
+    background: "transparent",
+    color: "#0f6faf",
+    fontSize: "12px",
+    fontWeight: 800,
+    cursor: "pointer",
   },
   dificultad: {
     margin: "0 0 14px 0",
@@ -817,10 +1067,24 @@ const styles = {
     color: "#0f3150",
     fontWeight: 800,
   },
-  actions3: {
+  actions2: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr",
+    gridTemplateColumns: "1fr 1fr",
     gap: "10px",
+  },
+  resourceLinks: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px 14px",
+    marginTop: "12px",
+    paddingTop: "10px",
+    borderTop: "1px solid #e4eef0",
+  },
+  resourceLink: {
+    color: "#0f6faf",
+    fontSize: "13px",
+    fontWeight: 800,
+    textDecoration: "none",
   },
   primaryButton: {
     border: "none",
@@ -861,27 +1125,6 @@ const styles = {
     padding: "13px 14px",
     background: "#cdebf0",
     color: "#0a5f95",
-    fontWeight: 800,
-    cursor: "pointer",
-    transform: "translateY(-2px)",
-    transition: "all 0.2s ease",
-  },
-  ghostButton: {
-    border: "1px solid #f2c35a",
-    borderRadius: "16px",
-    padding: "13px 14px",
-    background: "#fff8df",
-    color: "#b66a00",
-    fontWeight: 800,
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-  },
-  ghostButtonHover: {
-    border: "1px solid #e8b139",
-    borderRadius: "16px",
-    padding: "13px 14px",
-    background: "#fff1c7",
-    color: "#9b5800",
     fontWeight: 800,
     cursor: "pointer",
     transform: "translateY(-2px)",
