@@ -4,12 +4,23 @@ import { supabase } from "./supabase";
 
 type Tour = Record<string, string | undefined>;
 type CanvaMes = Record<string, string | undefined>;
+type GalleryItem = {
+  tourKey: string;
+  tourName?: string;
+  images: string[];
+};
 
 const SHEET_URL =
   "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/CONTROL";
 
 const CANVA_URL =
   "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/CANVA_MESES";
+
+const GALLERY_API_URL =
+  "https://tuproximoviaje.mx/api/gallery";
+
+const GALLERY_BACKUP_URL =
+  "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/GALERIA_WEB_BACKUP";
 
 function normalizarClave(texto: string) {
   return String(texto || "")
@@ -108,6 +119,101 @@ function ActionButton({ label, kind, onClick }: ActionButtonProps) {
   );
 }
 
+
+function TourGalleryPreview({
+  images,
+  alt,
+}: {
+  images: string[];
+  alt: string;
+}) {
+  const cleanImages = useMemo(
+    () =>
+      Array.from(
+        new Set(images.map((image) => String(image || "").trim()).filter(Boolean))
+      ),
+    [images]
+  );
+  const [index, setIndex] = useState(0);
+
+  if (cleanImages.length === 0) return null;
+
+  const activeIndex = Math.min(index, cleanImages.length - 1);
+  const activeImage = cleanImages[activeIndex];
+
+  const move = (step: number) => {
+    setIndex((current) => {
+      const next = current + step;
+      if (next < 0) return cleanImages.length - 1;
+      if (next >= cleanImages.length) return 0;
+      return next;
+    });
+  };
+
+  return (
+    <div style={styles.gallery}>
+      <div style={styles.galleryStage}>
+        <a
+          href={activeImage}
+          target="_blank"
+          rel="noreferrer"
+          style={styles.galleryImageLink}
+          title="Abrir fotografía"
+        >
+          <img
+            src={activeImage}
+            alt={`${alt} · foto ${activeIndex + 1}`}
+            style={styles.galleryImage}
+            loading="lazy"
+          />
+        </a>
+
+        {cleanImages.length > 1 ? (
+          <>
+            <button
+              type="button"
+              aria-label="Foto anterior"
+              onClick={() => move(-1)}
+              style={{ ...styles.galleryArrow, left: "10px" }}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              aria-label="Foto siguiente"
+              onClick={() => move(1)}
+              style={{ ...styles.galleryArrow, right: "10px" }}
+            >
+              ›
+            </button>
+          </>
+        ) : null}
+
+        <span style={styles.galleryCounter}>
+          {activeIndex + 1}/{cleanImages.length}
+        </span>
+      </div>
+
+      {cleanImages.length > 1 ? (
+        <div style={styles.galleryDots}>
+          {cleanImages.map((image, dotIndex) => (
+            <button
+              key={image}
+              type="button"
+              aria-label={`Ver foto ${dotIndex + 1}`}
+              onClick={() => setIndex(dotIndex)}
+              style={{
+                ...styles.galleryDot,
+                ...(dotIndex === activeIndex ? styles.galleryDotActive : {}),
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -180,6 +286,7 @@ function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [tours, setTours] = useState<Tour[]>([]);
   const [plantillasCanva, setPlantillasCanva] = useState<CanvaMes[]>([]);
+  const [galerias, setGalerias] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
@@ -221,6 +328,54 @@ function App() {
 
     setTours(Array.isArray(toursData) ? toursData : []);
     setPlantillasCanva(Array.isArray(canvaData) ? canvaData : []);
+
+    try {
+      const galleryRes = await fetch(GALLERY_API_URL);
+
+      if (galleryRes.ok) {
+        const galleryData = await galleryRes.json();
+        const galleryItems = Array.isArray(galleryData?.galleries)
+          ? galleryData.galleries
+          : [];
+
+        setGalerias(galleryItems);
+      } else {
+        throw new Error("Feed maestro de galerías no disponible");
+      }
+    } catch (galleryError) {
+      console.warn(
+        "No se pudo cargar el feed maestro; usando respaldo de galerías.",
+        galleryError
+      );
+
+      try {
+        const backupRes = await fetch(GALLERY_BACKUP_URL);
+        if (!backupRes.ok) throw new Error("Respaldo de galerías no disponible");
+
+        const backupData = await backupRes.json();
+        const backupRows = Array.isArray(backupData) ? backupData : [];
+
+        setGalerias(
+          backupRows
+            .map((row: Tour) => ({
+              tourKey: getField(row, ["CLAVE"]),
+              tourName: getField(row, ["TOUR"]),
+              images: [1, 2, 3, 4, 5]
+                .map((photoIndex) =>
+                  getField(row, [
+                    `FOTO_${photoIndex}`,
+                    `FOTO ${photoIndex}`,
+                  ])
+                )
+                .filter(Boolean),
+            }))
+            .filter((item: GalleryItem) => item.tourKey)
+        );
+      } catch (backupError) {
+        console.warn("Tampoco se pudo cargar el respaldo de galerías.", backupError);
+        setGalerias([]);
+      }
+    }
   } catch (err) {
     console.error(err);
     setError(
@@ -252,6 +407,17 @@ function App() {
       return ordenA - ordenB;
     });
 }, [plantillasCanva]);
+  const galeriasPorClave = useMemo(() => {
+    const mapa = new Map<string, string[]>();
+
+    galerias.forEach((item) => {
+      const key = normalizarClave(item.tourKey);
+      if (key) mapa.set(key, Array.isArray(item.images) ? item.images : []);
+    });
+
+    return mapa;
+  }, [galerias]);
+
   const toursFiltrados = useMemo(() => {
     const filtrados = tours.filter((tour) => {
       const texto = [
@@ -438,6 +604,8 @@ function App() {
 
               const precio = formatearMoneda(getField(tour, ["PRECIO", "O"]));
               const reserva = formatearMoneda(getField(tour, ["RESERVA", "P"]));
+              const galleryImages =
+                galeriasPorClave.get(normalizarClave(clave)) || [];
 
               const copyLimpio =
                 getField(tour, [
@@ -489,6 +657,8 @@ function App() {
                     Object.assign(e.currentTarget.style, styles.card);
                   }}
                 >
+                  <TourGalleryPreview images={galleryImages} alt={nombre} />
+
                   <div style={styles.cardTop}>
                     <span style={styles.claveBadge}>{clave || "—"}</span>
                     <span style={styles.estadoBadge}>{estadoTour}</span>
@@ -729,6 +899,75 @@ const styles = {
     border: "1px solid #bfe2e7",
     transform: "translateY(-4px)",
     transition: "all 0.2s ease",
+  },
+  gallery: {
+    margin: "-4px -4px 16px -4px",
+  },
+  galleryStage: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: "20px",
+    background: "#eaf4f6",
+    aspectRatio: "16 / 9",
+    boxShadow: "inset 0 0 0 1px rgba(15, 111, 175, 0.08)",
+  },
+  galleryImageLink: {
+    display: "block",
+    width: "100%",
+    height: "100%",
+  },
+  galleryImage: {
+    display: "block",
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  galleryArrow: {
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: "36px",
+    height: "36px",
+    borderRadius: "999px",
+    border: "1px solid rgba(255,255,255,0.72)",
+    background: "rgba(15,49,80,0.72)",
+    color: "#ffffff",
+    fontSize: "25px",
+    lineHeight: 1,
+    cursor: "pointer",
+    display: "grid",
+    placeItems: "center",
+    boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
+  },
+  galleryCounter: {
+    position: "absolute",
+    right: "10px",
+    bottom: "10px",
+    padding: "6px 9px",
+    borderRadius: "999px",
+    background: "rgba(15,49,80,0.76)",
+    color: "#ffffff",
+    fontSize: "12px",
+    fontWeight: 800,
+  },
+  galleryDots: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "6px",
+    marginTop: "9px",
+  },
+  galleryDot: {
+    width: "7px",
+    height: "7px",
+    borderRadius: "999px",
+    border: "none",
+    padding: 0,
+    background: "#c6dce1",
+    cursor: "pointer",
+  },
+  galleryDotActive: {
+    width: "20px",
+    background: "#d81b60",
   },
   cardTop: {
     display: "flex",
