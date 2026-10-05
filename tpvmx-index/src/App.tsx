@@ -84,24 +84,18 @@ function formatearMoneda(valor: string) {
 
 type ActionButtonProps = {
   label: string;
-  kind: "primary" | "secondary" | "ghost";
+  kind: "primary" | "secondary";
   onClick: () => void;
 };
 
 function ActionButton({ label, kind, onClick }: ActionButtonProps) {
   const baseStyle =
-    kind === "primary"
-      ? styles.primaryButton
-      : kind === "secondary"
-        ? styles.secondaryButton
-        : styles.ghostButton;
+    kind === "primary" ? styles.primaryButton : styles.secondaryButton;
 
   const hoverStyle =
     kind === "primary"
       ? styles.primaryButtonHover
-      : kind === "secondary"
-        ? styles.secondaryButtonHover
-        : styles.ghostButtonHover;
+      : styles.secondaryButtonHover;
 
   return (
     <button
@@ -248,6 +242,8 @@ function App() {
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [estado, setEstado] = useState("");
+  const [descripcionesAbiertas, setDescripcionesAbiertas] = useState<Record<string, boolean>>({});
+  const [fechasAbiertas, setFechasAbiertas] = useState<Record<string, boolean>>({});
   const galleryKey = useMemo(
     () => new URLSearchParams(window.location.search).get("galeria") || "",
     []
@@ -532,21 +528,12 @@ function App() {
             ))}
          </select>
 
-<a
-  href="https://script.google.com/macros/s/AKfycbwnJWa-ZaC12TE-L9b_8V0yWUmpcLA2-GtTwPRgbQdYoSFYl3jtcox1TrOn_D27D5LS7Q/exec"
-  target="_blank"
-  rel="noopener noreferrer"
-  style={styles.availabilityButton}
->
-  📊 Ver disponibilidad y ocupación 🟢🟡🔴
-</a>
 </div>
 
 <div style={styles.metaRow}>
           <span style={styles.metaBadge}>
             Tours encontrados: {toursFiltrados.length}
           </span>
-          <span style={styles.metaBadgeSecondary}>Fuente: CONTROL</span>
         </div>
 
         {loading && <div style={styles.infoBox}>Cargando tours...</div>}
@@ -614,23 +601,23 @@ function App() {
                   "AL",
                 ]) || "";
 
-              const resumen = [
-                nombre,
-                descripcion,
-                dificultad ? `Nivel de dificultad: ${dificultad}` : "",
-                `Estado: ${estadoTour}`,
-                `Próximas fechas:\n${fechas}`,
-                `Precio: ${precio}`,
-                `Reserva con: ${reserva}`,
-                "",
-                "INFORMES Y RESERVACIONES:",
-                "5520698845 (Cel y WhatsApp)",
-                "5650929234 (Cel y WhatsApp)",
-                "5535031950 (Cel y WhatsApp)",
-                "hola@tuproximoviaje.mx",
-              ]
-                .filter(Boolean)
-                .join("\n\n");
+              const cardKey = normalizarClave(clave || nombre);
+              const descripcionLarga = descripcion.length > 180;
+              const descripcionVisible =
+                descripcionLarga && !descripcionesAbiertas[cardKey]
+                  ? `${descripcion.slice(0, 180).trim()}…`
+                  : descripcion;
+
+              const lineasFecha = fechas
+                .split(/\r?\n/)
+                .map((linea) => linea.trim())
+                .filter(Boolean);
+              const tieneMuchasFechas = lineasFecha.length > 3;
+              const fechasVisibles =
+                tieneMuchasFechas && !fechasAbiertas[cardKey]
+                  ? lineasFecha.slice(0, 3)
+                  : lineasFecha;
+              const fechasRestantes = Math.max(0, lineasFecha.length - 3);
 
               return (
                 <div
@@ -650,19 +637,24 @@ function App() {
 
                   <h2 style={styles.cardTitle}>{nombre}</h2>
 
-                  {galleryImages.length > 0 ? (
-                    <a
-                      href={`?galeria=${encodeURIComponent(clave)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={styles.galleryLink}
-                    >
-                      📷 Galería de fotos
-                    </a>
-                  ) : null}
-
                   {descripcion ? (
-                    <p style={styles.cardDescription}>{descripcion}</p>
+                    <div style={styles.descriptionBlock}>
+                      <p style={styles.cardDescription}>{descripcionVisible}</p>
+                      {descripcionLarga ? (
+                        <button
+                          type="button"
+                          style={styles.inlineToggle}
+                          onClick={() =>
+                            setDescripcionesAbiertas((current) => ({
+                              ...current,
+                              [cardKey]: !current[cardKey],
+                            }))
+                          }
+                        >
+                          {descripcionesAbiertas[cardKey] ? "Ver menos" : "Ver más"}
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
 
                   {dificultad ? (
@@ -673,7 +665,27 @@ function App() {
 
                   <div style={styles.block}>
                     <p style={styles.label}>Próximas fechas</p>
-                    <p style={styles.valuePre}>{fechas}</p>
+                    <p style={styles.valuePre}>
+                      {fechasVisibles.length > 0
+                        ? fechasVisibles.join("\n")
+                        : "Por definir"}
+                    </p>
+                    {tieneMuchasFechas ? (
+                      <button
+                        type="button"
+                        style={styles.inlineToggle}
+                        onClick={() =>
+                          setFechasAbiertas((current) => ({
+                            ...current,
+                            [cardKey]: !current[cardKey],
+                          }))
+                        }
+                      >
+                        {fechasAbiertas[cardKey]
+                          ? "Ver menos fechas"
+                          : `+ ${fechasRestantes} fechas más`}
+                      </button>
+                    ) : null}
                   </div>
 
                   <div style={styles.priceRow}>
@@ -688,7 +700,7 @@ function App() {
                     </div>
                   </div>
 
-                  <div style={styles.actions3}>
+                  <div style={styles.actions2}>
                     <ActionButton
                       kind="primary"
                       label="Copiar copy agencia"
@@ -700,12 +712,28 @@ function App() {
                       label="Copiar copy TPVMX"
                       onClick={() => copiarTexto(copyEmojis, "copy con emojis")}
                     />
+                  </div>
 
-                    <ActionButton
-                      kind="ghost"
-                      label="Copiar resumen"
-                      onClick={() => copiarTexto(resumen, "resumen")}
-                    />
+                  <div style={styles.resourceLinks}>
+                    {galleryImages.length > 0 ? (
+                      <a
+                        href={`?galeria=${encodeURIComponent(clave)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={styles.resourceLink}
+                      >
+                        📷 Galería de fotos
+                      </a>
+                    ) : null}
+
+                    <a
+                      href="https://script.google.com/macros/s/AKfycbwnJWa-ZaC12TE-L9b_8V0yWUmpcLA2-GtTwPRgbQdYoSFYl3jtcox1TrOn_D27D5LS7Q/exec"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={styles.resourceLink}
+                    >
+                      🟢 Disponibilidad
+                    </a>
                   </div>
                 </div>
               );
@@ -810,20 +838,6 @@ const styles = {
     background: "#fbfefe",
   },
 
-  availabilityButton: {
-  gridColumn: "1 / -1",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "13px 18px",
-  borderRadius: "14px",
-  background: "#17bebb",
-  color: "#ffffff",
-  fontSize: "15px",
-  fontWeight: 700,
-  textDecoration: "none",
-  cursor: "pointer",
-},
   select: {
     width: "100%",
     padding: "14px 16px",
@@ -844,14 +858,6 @@ const styles = {
   metaBadge: {
     background: "#f9dbe8",
     color: "#b11658",
-    borderRadius: "999px",
-    padding: "9px 14px",
-    fontSize: "13px",
-    fontWeight: 800,
-  },
-  metaBadgeSecondary: {
-    background: "#d8eef2",
-    color: "#0f6faf",
     borderRadius: "999px",
     padding: "9px 14px",
     fontSize: "13px",
@@ -894,16 +900,6 @@ const styles = {
     border: "1px solid #bfe2e7",
     transform: "translateY(-4px)",
     transition: "all 0.2s ease",
-  },
-  galleryLink: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    margin: "0 0 12px 0",
-    color: "#0f6faf",
-    fontSize: "13px",
-    fontWeight: 800,
-    textDecoration: "none",
   },
   galleryPage: {
     minHeight: "100vh",
@@ -986,11 +982,24 @@ const styles = {
     color: "#0f3150",
     fontWeight: 800,
   },
+  descriptionBlock: {
+    marginBottom: "10px",
+  },
   cardDescription: {
-    margin: "0 0 10px 0",
+    margin: 0,
     color: "#4f6b7e",
     lineHeight: 1.5,
     fontSize: "14px",
+  },
+  inlineToggle: {
+    marginTop: "5px",
+    padding: 0,
+    border: "none",
+    background: "transparent",
+    color: "#0f6faf",
+    fontSize: "12px",
+    fontWeight: 800,
+    cursor: "pointer",
   },
   dificultad: {
     margin: "0 0 14px 0",
@@ -1042,10 +1051,24 @@ const styles = {
     color: "#0f3150",
     fontWeight: 800,
   },
-  actions3: {
+  actions2: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr",
+    gridTemplateColumns: "1fr 1fr",
     gap: "10px",
+  },
+  resourceLinks: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px 14px",
+    marginTop: "12px",
+    paddingTop: "10px",
+    borderTop: "1px solid #e4eef0",
+  },
+  resourceLink: {
+    color: "#0f6faf",
+    fontSize: "13px",
+    fontWeight: 800,
+    textDecoration: "none",
   },
   primaryButton: {
     border: "none",
@@ -1086,27 +1109,6 @@ const styles = {
     padding: "13px 14px",
     background: "#cdebf0",
     color: "#0a5f95",
-    fontWeight: 800,
-    cursor: "pointer",
-    transform: "translateY(-2px)",
-    transition: "all 0.2s ease",
-  },
-  ghostButton: {
-    border: "1px solid #f2c35a",
-    borderRadius: "16px",
-    padding: "13px 14px",
-    background: "#fff8df",
-    color: "#b66a00",
-    fontWeight: 800,
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-  },
-  ghostButtonHover: {
-    border: "1px solid #e8b139",
-    borderRadius: "16px",
-    padding: "13px 14px",
-    background: "#fff1c7",
-    color: "#9b5800",
     fontWeight: 800,
     cursor: "pointer",
     transform: "translateY(-2px)",
