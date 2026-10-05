@@ -4,6 +4,13 @@ import { supabase } from "./supabase";
 
 type Tour = Record<string, string | undefined>;
 type CanvaMes = Record<string, string | undefined>;
+type AvailabilityRow = Record<string, string | undefined>;
+type AvailabilityItem = {
+  date: string;
+  status: string;
+  seats: string;
+  dateMs: number | null;
+};
 type GalleryItem = {
   tourKey: string;
   tourName?: string;
@@ -15,6 +22,9 @@ const SHEET_URL =
 
 const CANVA_URL =
   "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/CANVA_MESES";
+
+const AVAILABILITY_URL =
+  "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/DISPONIBILIDAD_WEB";
 
 const GALLERY_API_URL =
   "https://tuproximoviaje.mx/api/gallery";
@@ -47,6 +57,90 @@ function getField(tour: Tour, posibles: string[]): string {
   }
 
   return "";
+}
+
+
+function normalizarTexto(texto: string) {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function parseAvailabilityDate(value: string) {
+  const match = String(value || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+
+  const [, dd, mm, yyyy] = match;
+  return Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd));
+}
+
+function formatAvailabilityDate(value: string) {
+  const timestamp = parseAvailabilityDate(value);
+  if (timestamp === null) return value;
+
+  const formatted = new Intl.DateTimeFormat("es-MX", {
+    timeZone: "UTC",
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(timestamp));
+
+  return formatted
+    .replace(/\./g, "")
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function disponibilidadVisual(status: string) {
+  const text = normalizarTexto(status);
+
+  if (
+    text.includes("no disponible") ||
+    text.includes("agotado") ||
+    text.includes("lleno")
+  ) {
+    return {
+      icon: "🔴",
+      background: "#fff1f4",
+      border: "#f4c4d6",
+      color: "#a9194b",
+    };
+  }
+
+  if (text.includes("pocos")) {
+    return {
+      icon: "🟡",
+      background: "#fff8df",
+      border: "#f2d98c",
+      color: "#8d6400",
+    };
+  }
+
+  return {
+    icon: "🟢",
+    background: "#eefaf6",
+    border: "#bfe8d6",
+    color: "#167452",
+  };
+}
+
+function disponibilidadTexto(item: AvailabilityItem) {
+  const status = normalizarTexto(item.status);
+
+  if (
+    status.includes("no disponible") ||
+    status.includes("agotado") ||
+    status.includes("lleno")
+  ) {
+    return "Sin lugares";
+  }
+
+  if (item.seats) {
+    return `${item.seats} lugares disponibles`;
+  }
+
+  return item.status || "Consultar disponibilidad";
 }
 
 function esSinFecha(valor: string) {
@@ -237,6 +331,7 @@ function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [tours, setTours] = useState<Tour[]>([]);
   const [plantillasCanva, setPlantillasCanva] = useState<CanvaMes[]>([]);
+  const [disponibilidad, setDisponibilidad] = useState<AvailabilityRow[]>([]);
   const [galerias, setGalerias] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -271,9 +366,10 @@ function App() {
     setLoading(true);
     setError("");
 
-    const [toursRes, canvaRes] = await Promise.all([
+    const [toursRes, canvaRes, availabilityRes] = await Promise.all([
       fetch(SHEET_URL),
       fetch(CANVA_URL),
+      fetch(AVAILABILITY_URL).catch(() => null),
     ]);
 
     if (!toursRes.ok) throw new Error("No se pudo leer Google Sheets");
@@ -284,6 +380,14 @@ function App() {
 
     setTours(Array.isArray(toursData) ? toursData : []);
     setPlantillasCanva(Array.isArray(canvaData) ? canvaData : []);
+
+    if (availabilityRes?.ok) {
+      const availabilityData = await availabilityRes.json();
+      setDisponibilidad(Array.isArray(availabilityData) ? availabilityData : []);
+    } else {
+      console.warn("No se pudo cargar DISPONIBILIDAD_WEB.");
+      setDisponibilidad([]);
+    }
 
     try {
       const galleryRes = await fetch(GALLERY_API_URL);
@@ -373,6 +477,47 @@ function App() {
 
     return mapa;
   }, [galerias]);
+
+  const disponibilidadPorClave = useMemo(() => {
+    const mapa = new Map<string, AvailabilityItem[]>();
+    const todayUtc = Date.UTC(
+      new Date().getUTCFullYear(),
+      new Date().getUTCMonth(),
+      new Date().getUTCDate()
+    );
+
+    disponibilidad.forEach((row) => {
+      const key = normalizarClave(String(row.CLAVE || ""));
+      if (!key) return;
+
+      const date = String(row.FECHA || "").trim();
+      const item: AvailabilityItem = {
+        date,
+        status: String(row.ESTATUS || "").trim(),
+        seats: String(row["LUGARES DISPONIBLES"] || "").trim(),
+        dateMs: parseAvailabilityDate(date),
+      };
+
+      if (item.dateMs !== null && item.dateMs < todayUtc) return;
+
+      const current = mapa.get(key) || [];
+      current.push(item);
+      mapa.set(key, current);
+    });
+
+    mapa.forEach((items, key) => {
+      mapa.set(
+        key,
+        [...items].sort(
+          (a, b) =>
+            (a.dateMs ?? Number.MAX_SAFE_INTEGER) -
+            (b.dateMs ?? Number.MAX_SAFE_INTEGER)
+        )
+      );
+    });
+
+    return mapa;
+  }, [disponibilidad]);
 
   const toursFiltrados = useMemo(() => {
     const filtrados = tours.filter((tour) => {
@@ -577,8 +722,14 @@ function App() {
 
               const precio = formatearMoneda(getField(tour, ["PRECIO", "O"]));
               const reserva = formatearMoneda(getField(tour, ["RESERVA", "P"]));
+              const claveNormalizada = normalizarClave(clave);
               const galleryImages =
-                galeriasPorClave.get(normalizarClave(clave)) || [];
+                galeriasPorClave.get(claveNormalizada) || [];
+              const proximaDisponibilidad =
+                disponibilidadPorClave.get(claveNormalizada)?.[0] || null;
+              const disponibilidadVista = proximaDisponibilidad
+                ? disponibilidadVisual(proximaDisponibilidad.status)
+                : null;
 
               const copyLimpio =
                 getField(tour, [
@@ -689,6 +840,34 @@ function App() {
                     ) : null}
                   </div>
 
+                  {proximaDisponibilidad && disponibilidadVista ? (
+                    <div
+                      style={{
+                        ...styles.nextAvailability,
+                        background: disponibilidadVista.background,
+                        borderColor: disponibilidadVista.border,
+                      }}
+                    >
+                      <div>
+                        <span style={styles.nextAvailabilityLabel}>
+                          Próxima salida
+                        </span>
+                        <strong
+                          style={{
+                            ...styles.nextAvailabilityValue,
+                            color: disponibilidadVista.color,
+                          }}
+                        >
+                          {disponibilidadVista.icon}{" "}
+                          {disponibilidadTexto(proximaDisponibilidad)}
+                        </strong>
+                      </div>
+                      <span style={styles.nextAvailabilityDate}>
+                        {formatAvailabilityDate(proximaDisponibilidad.date)}
+                      </span>
+                    </div>
+                  ) : null}
+
                   <div style={styles.priceRow}>
                     <div style={styles.priceBox}>
                       <span style={styles.priceLabel}>Precio</span>
@@ -733,7 +912,7 @@ function App() {
                       rel="noopener noreferrer"
                       style={styles.resourceLink}
                     >
-                      🟢 Disponibilidad
+                      🟢 Ver disponibilidad completa
                     </a>
                   </div>
                 </div>
@@ -1040,6 +1219,38 @@ const styles = {
     color: "#0f3150",
     fontSize: "15px",
     lineHeight: 1.45,
+  },
+  nextAvailability: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "16px",
+    padding: "11px 13px",
+    border: "1px solid",
+    borderRadius: "14px",
+  },
+  nextAvailabilityLabel: {
+    display: "block",
+    marginBottom: "3px",
+    color: "#547085",
+    fontSize: "11px",
+    fontWeight: 800,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  nextAvailabilityValue: {
+    display: "block",
+    fontSize: "14px",
+    lineHeight: 1.25,
+    fontWeight: 800,
+  },
+  nextAvailabilityDate: {
+    flexShrink: 0,
+    color: "#0f3150",
+    fontSize: "12px",
+    fontWeight: 800,
+    whiteSpace: "nowrap",
   },
   priceRow: {
     display: "grid",
