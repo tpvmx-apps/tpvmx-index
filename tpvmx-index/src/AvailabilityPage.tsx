@@ -67,6 +67,7 @@ export function AvailabilityPage({ rows, initialKey = "" }: Props) {
           status: String(row.ESTATUS || "").trim(),
           seats: String(row["LUGARES DISPONIBLES"] || "").trim(),
           key: String(row.CLAVE || "").trim(),
+          paxReserved: Number(String(row["PAX RESERVADOS"] || "").trim()),
         };
       })
       .filter((item) => item.date && item.dateMs !== null && item.dateMs >= todayUtc)
@@ -134,24 +135,48 @@ export function AvailabilityPage({ rows, initialKey = "" }: Props) {
               const kind = statusKind(item.status);
               const visual = statusStyles[kind];
 
+              const hasPaxReserved = Number.isFinite(item.paxReserved);
+              const quorumReached = hasPaxReserved && item.paxReserved >= 7;
+
               return (
                 <article key={`${item.key}-${item.date}-${index}`} style={styles.card}>
                   <div style={styles.cardHeader}>
-                    <div>
+                    <div style={styles.cardMain}>
                       <div style={styles.date}>📅 {item.date}</div>
                       <h2 style={styles.tourTitle}>{item.tour || "Tour sin nombre"}</h2>
+                    </div>
+
+                    <div style={styles.cardStatusColumn}>
+                      <span style={{ ...styles.statusBadge, ...visual.badge }}>
+                        {visual.dot} {cleanStatus(item.status) || visual.fallback}
+                      </span>
                       {item.key ? <span style={styles.keyBadge}>{item.key}</span> : null}
                     </div>
-                    <span style={{ ...styles.statusBadge, ...visual.badge }}>
-                      {visual.dot} {cleanStatus(item.status) || visual.fallback}
-                    </span>
                   </div>
 
-                  <div style={styles.seatsBox}>
-                    <span style={styles.seatsLabel}>Lugares disponibles</span>
-                    <strong style={{ ...styles.seatsValue, color: visual.color }}>
-                      {item.seats || "Consultar"}
-                    </strong>
+                  <div style={styles.infoGrid}>
+                    <div style={styles.infoBox}>
+                      <span style={styles.infoLabel}>Lugares disponibles</span>
+                      <strong style={{ ...styles.seatsValue, color: visual.color }}>
+                        {item.seats || "Consultar"}
+                      </strong>
+                    </div>
+
+                    <div style={styles.infoBox}>
+                      <span style={styles.infoLabel}>Operación</span>
+                      <strong
+                        style={{
+                          ...styles.operationValue,
+                          color: quorumReached ? "#167452" : "#8d6400",
+                        }}
+                      >
+                        {hasPaxReserved
+                          ? quorumReached
+                            ? "✅ QUÓRUM ALCANZADO"
+                            : "⏳ EN PROCESO DE QUÓRUM"
+                          : "Consultar operación"}
+                      </strong>
+                    </div>
                   </div>
                 </article>
               );
@@ -356,6 +381,17 @@ const styles = {
     alignItems: "flex-start",
     gap: "14px",
   },
+  cardMain: {
+    minWidth: 0,
+    flex: 1,
+  },
+  cardStatusColumn: {
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "flex-end",
+    gap: "8px",
+    flexShrink: 0,
+  },
   date: {
     fontSize: "13px",
     fontWeight: 800,
@@ -386,23 +422,37 @@ const styles = {
     textAlign: "center" as const,
     maxWidth: "150px",
   },
-  seatsBox: {
+  infoGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "12px",
     marginTop: "16px",
+  },
+  infoBox: {
+    minHeight: "88px",
     padding: "14px",
     borderRadius: "16px",
     background: "#f5f8fa",
     border: "1px solid #edf1f3",
+    display: "flex",
+    flexDirection: "column" as const,
+    justifyContent: "center",
   },
-  seatsLabel: {
+  infoLabel: {
     display: "block",
     color: "#547085",
     fontSize: "12px",
     textTransform: "uppercase" as const,
     letterSpacing: ".04em",
-    marginBottom: "5px",
+    marginBottom: "6px",
   },
   seatsValue: {
     fontSize: "26px",
+    fontWeight: 800,
+  },
+  operationValue: {
+    fontSize: "15px",
+    lineHeight: 1.25,
     fontWeight: 800,
   },
   empty: {
