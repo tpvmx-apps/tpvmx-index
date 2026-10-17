@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { AdminAgenciesPanel } from "./AdminAgencies";
 
 type Tour = Record<string, string | undefined>;
+type IndexProfile = {
+  agency_name: string;
+  role: "admin" | "agency";
+  active: boolean;
+};
 type CanvaMes = Record<string, string | undefined>;
 type AvailabilityRow = Record<string, string | undefined>;
 type AvailabilityItem = {
@@ -329,6 +335,8 @@ function LoginScreen() {
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<IndexProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [tours, setTours] = useState<Tour[]>([]);
   const [plantillasCanva, setPlantillasCanva] = useState<CanvaMes[]>([]);
   const [disponibilidad, setDisponibilidad] = useState<AvailabilityRow[]>([]);
@@ -357,6 +365,44 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      setProfile(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const cargarPerfil = async () => {
+      setProfileLoading(true);
+
+      const { data, error } = await supabase
+        .from("index_agencies")
+        .select("agency_name,role,active")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error || !data || data.active !== true) {
+        setProfile(null);
+        setProfileLoading(false);
+        await supabase.auth.signOut();
+        return;
+      }
+
+      setProfile(data as IndexProfile);
+      setProfileLoading(false);
+    };
+
+    void cargarPerfil();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
   useEffect(() => {
     if (!session) return;
@@ -574,6 +620,14 @@ function App() {
     return <LoginScreen />;
   }
 
+  if (profileLoading || !profile) {
+    return (
+      <div style={styles.loginPage}>
+        <div style={styles.infoBox}>Validando acceso a INDEX...</div>
+      </div>
+    );
+  }
+
   if (galleryKey) {
     const normalizedGalleryKey = normalizarClave(galleryKey);
     const galleryImages = galeriasPorClave.get(normalizedGalleryKey) || [];
@@ -622,14 +676,20 @@ function App() {
             </div>
           </div>
 
-          <button
-            style={styles.logoutButton}
-            onClick={async () => {
-              await supabase.auth.signOut();
-            }}
-          >
-            Cerrar sesión
-          </button>
+          <div style={styles.topActions}>
+            {profile.role === "admin" ? (
+              <AdminAgenciesPanel currentUserId={session.user.id} />
+            ) : null}
+
+            <button
+              style={styles.logoutButton}
+              onClick={async () => {
+                await supabase.auth.signOut();
+              }}
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
   {plantillasActivas.length > 0 && (
@@ -986,6 +1046,13 @@ const styles = {
     margin: 0,
     color: "#547085",
     fontSize: "15px",
+  },
+  topActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
   },
   logoutButton: {
     border: "1px solid #d8eef2",
