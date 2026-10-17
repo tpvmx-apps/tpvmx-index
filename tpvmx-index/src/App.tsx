@@ -646,23 +646,14 @@ function App() {
             </div>
           </div>
 
-          <div style={styles.topBarActions}>
-            <a
-              href="?disponibilidad=1"
-              style={styles.availabilityButton}
-            >
-              🟢 Disponibilidad
-            </a>
-
-            <button
-              style={styles.logoutButton}
-              onClick={async () => {
-                await supabase.auth.signOut();
-              }}
-            >
-              Cerrar sesión
-            </button>
-          </div>
+          <button
+            style={styles.logoutButton}
+            onClick={async () => {
+              await supabase.auth.signOut();
+            }}
+          >
+            Cerrar sesión
+          </button>
         </div>
 
   {plantillasActivas.length > 0 && (
@@ -684,6 +675,23 @@ function App() {
     </div>
   </div>
 )}
+
+        <div style={styles.availabilityStrip}>
+          <div>
+            <p style={styles.availabilityStripEyebrow}>DISPONIBILIDAD DE SALIDAS</p>
+            <p style={styles.availabilityStripText}>
+              Consulta lugares disponibles y estatus de quórum de las próximas salidas.
+            </p>
+          </div>
+
+          <a
+            href="?disponibilidad=1"
+            style={styles.availabilityStripButton}
+          >
+            🟢 Consultar disponibilidad
+          </a>
+        </div>
+
         <div style={styles.filtersBox}>
           <input
             type="text"
@@ -1018,16 +1026,37 @@ const styles = {
     color: "#547085",
     fontSize: "15px",
   },
-  topBarActions: {
+  availabilityStrip: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    justifyContent: "space-between",
+    gap: "16px",
     flexWrap: "wrap" as const,
-  },
-  availabilityButton: {
-    display: "inline-block",
-    border: "1px solid #bfe8d6",
+    marginBottom: "16px",
+    padding: "16px 18px",
+    borderRadius: "18px",
     background: "#eefaf6",
+    border: "1px solid #bfe8d6",
+    boxShadow: "0 8px 20px rgba(22, 116, 82, 0.06)",
+  },
+  availabilityStripEyebrow: {
+    margin: "0 0 4px 0",
+    color: "#167452",
+    fontSize: "12px",
+    fontWeight: 800,
+    letterSpacing: "0.08em",
+  },
+  availabilityStripText: {
+    margin: 0,
+    color: "#486376",
+    fontSize: "14px",
+    lineHeight: 1.45,
+  },
+  availabilityStripButton: {
+    display: "inline-block",
+    flexShrink: 0,
+    border: "1px solid #8bd5b8",
+    background: "#ffffff",
     color: "#167452",
     borderRadius: "14px",
     padding: "12px 16px",
