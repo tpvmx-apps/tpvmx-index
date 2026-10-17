@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { AvailabilityPage } from "./AvailabilityPage";
 
 type Tour = Record<string, string | undefined>;
 type CanvaMes = Record<string, string | undefined>;
@@ -343,6 +344,10 @@ function App() {
     () => new URLSearchParams(window.location.search).get("galeria") || "",
     []
   );
+  const availabilityKey = useMemo(
+    () => new URLSearchParams(window.location.search).get("disponibilidad") || "",
+    []
+  );
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -574,6 +579,25 @@ function App() {
     return <LoginScreen />;
   }
 
+  if (availabilityKey) {
+    if (loading) {
+      return (
+        <div style={styles.page}>
+          <div style={styles.container}>
+            <div style={styles.infoBox}>Cargando disponibilidad...</div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <AvailabilityPage
+        rows={disponibilidad}
+        initialKey={availabilityKey}
+      />
+    );
+  }
+
   if (galleryKey) {
     const normalizedGalleryKey = normalizarClave(galleryKey);
     const galleryImages = galeriasPorClave.get(normalizedGalleryKey) || [];
@@ -622,14 +646,23 @@ function App() {
             </div>
           </div>
 
-          <button
-            style={styles.logoutButton}
-            onClick={async () => {
-              await supabase.auth.signOut();
-            }}
-          >
-            Cerrar sesión
-          </button>
+          <div style={styles.topBarActions}>
+            <a
+              href="?disponibilidad=1"
+              style={styles.availabilityButton}
+            >
+              🟢 Disponibilidad
+            </a>
+
+            <button
+              style={styles.logoutButton}
+              onClick={async () => {
+                await supabase.auth.signOut();
+              }}
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
   {plantillasActivas.length > 0 && (
@@ -907,9 +940,7 @@ function App() {
                     ) : null}
 
                     <a
-                      href="https://script.google.com/macros/s/AKfycbwnJWa-ZaC12TE-L9b_8V0yWUmpcLA2-GtTwPRgbQdYoSFYl3jtcox1TrOn_D27D5LS7Q/exec"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={`?disponibilidad=${encodeURIComponent(clave || "1")}`}
                       style={styles.resourceLink}
                     >
                       🟢 Ver disponibilidad completa
@@ -986,6 +1017,23 @@ const styles = {
     margin: 0,
     color: "#547085",
     fontSize: "15px",
+  },
+  topBarActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    flexWrap: "wrap" as const,
+  },
+  availabilityButton: {
+    display: "inline-block",
+    border: "1px solid #bfe8d6",
+    background: "#eefaf6",
+    color: "#167452",
+    borderRadius: "14px",
+    padding: "12px 16px",
+    fontWeight: 800,
+    cursor: "pointer",
+    textDecoration: "none",
   },
   logoutButton: {
     border: "1px solid #d8eef2",
