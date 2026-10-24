@@ -1,111 +1,348 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap");
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
+  --font-body: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Manrope", var(--font-body);
+  --bg: #fafaf7;
+  --surface: #ffffff;
+  --soft: #f2f5f4;
+  --ink: #163e55;
+  --text: #40535b;
+  --muted: #607078;
+  --brand: #3eaeae;
+  --brand-dark: #238e89;
+  --brand-blue: #046dad;
+  --brand-pink: #e50051;
+  --brand-yellow: #ffbd00;
+  --line: #dfe7e5;
   color: var(--text);
   background: var(--bg);
+  font-family: var(--font-body);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+* { box-sizing: border-box; }
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
+html { background: var(--bg); }
 
 body {
   margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 88% 6%, rgba(62,174,174,.08), transparent 18rem),
+    #fafaf7;
 }
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button { -webkit-tap-highlight-color: transparent; }
 
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
+#root {
+  width: 100%;
+  min-height: 100svh;
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
+
+/* Perfil comercial de la agencia */
+.agency-profile-card {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    linear-gradient(rgba(255,255,255,.96), rgba(255,255,255,.96)),
+    repeating-linear-gradient(135deg, rgba(22,62,85,.025) 0 1px, transparent 1px 9px);
+  box-shadow: 0 12px 34px rgba(22,62,85,.055);
 }
-p {
+
+.agency-profile-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--brand-pink);
+}
+
+.agency-profile-loading {
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.agency-profile-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.agency-profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.agency-profile-logo-wrap {
+  width: 62px;
+  height: 62px;
+  flex: 0 0 62px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.agency-profile-logo-wrap.is-large {
+  width: 92px;
+  height: 92px;
+  flex-basis: 92px;
+}
+
+.agency-profile-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 7px;
+}
+
+.agency-profile-logo-placeholder {
+  color: #8a989d;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.agency-profile-eyebrow {
+  margin: 0 0 4px;
+  color: var(--brand-dark);
+  font-size: .72rem;
+  font-weight: 850;
+  letter-spacing: .13em;
+}
+
+.agency-profile-summary h2 {
   margin: 0;
+  color: var(--ink);
+  font-size: 1.22rem;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
+.agency-profile-caption {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.45;
+}
+
+.agency-profile-edit,
+.agency-profile-save,
+.agency-profile-upload {
+  min-height: 42px;
   display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.agency-profile-edit {
+  border: 1px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+}
+
+.agency-profile-edit:hover {
+  background: var(--ink);
+  color: #fff;
+}
+
+.agency-profile-editor {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.agency-profile-logo-editor {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.agency-profile-logo-editor strong {
+  color: var(--ink);
+}
+
+.agency-profile-logo-editor p {
+  margin: 3px 0 9px;
+  color: var(--muted);
+  font-size: .78rem;
+}
+
+.agency-profile-upload {
+  min-height: 36px;
+  padding-inline: 12px;
+  border: 1px solid rgba(62,174,174,.4);
+  background: #f4fbfa;
+  color: var(--brand-dark);
+  font-size: .78rem;
+}
+
+.agency-profile-upload input { display: none; }
+
+.agency-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.agency-profile-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.agency-profile-grid label > span {
+  color: var(--ink);
+  font-size: .74rem;
+  font-weight: 800;
+}
+
+.agency-profile-grid input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 12px;
+  outline: none;
+}
+
+.agency-profile-grid input:focus {
+  border-color: rgba(62,174,174,.8);
+  box-shadow: 0 0 0 3px rgba(62,174,174,.10);
+}
+
+.agency-profile-visibility {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+  margin-top: 14px;
+  color: var(--text);
+  font-size: .82rem;
+  font-weight: 650;
+}
+
+.agency-profile-visibility label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agency-profile-visibility input {
+  accent-color: var(--brand-dark);
+}
+
+.agency-profile-preview {
+  margin-top: 16px;
+  padding: 15px 16px;
+  border: 1px solid rgba(62,174,174,.25);
+  border-radius: 14px;
+  background: #f5fbfa;
+  color: var(--text);
+}
+
+.agency-profile-preview > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--brand-dark);
+  font-size: .7rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.agency-profile-preview strong {
+  color: var(--ink);
+}
+
+.agency-profile-preview p {
+  margin: 4px 0 0;
+  font-size: .84rem;
+}
+
+.agency-profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.agency-profile-save {
+  border: 0;
+  background: var(--brand);
+  color: #fff;
+}
+
+.agency-profile-save:hover { background: var(--brand-dark); }
+
+.agency-profile-save:disabled,
+.agency-profile-upload:has(input:disabled) {
+  opacity: .58;
+  cursor: wait;
+}
+
+.agency-profile-message {
+  color: var(--brand-dark);
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.agency-profile-message.compact {
+  margin: 12px 0 0;
+}
+
+@media (max-width: 700px) {
+  .agency-profile-summary,
+  .agency-profile-logo-editor {
+    align-items: flex-start;
+  }
+
+  .agency-profile-summary {
+    flex-direction: column;
+  }
+
+  .agency-profile-edit {
+    width: 100%;
+  }
+
+  .agency-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .agency-profile-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
