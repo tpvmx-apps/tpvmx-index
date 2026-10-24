@@ -373,17 +373,54 @@ function App() {
   );
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-    });
+    let alive = true;
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      setSession(currentSession);
+      if (alive) setSession(currentSession);
     });
 
-    return () => subscription.unsubscribe();
+    const bootstrapAuth = async () => {
+      const hash = new URLSearchParams(
+        window.location.hash.replace(/^#/, "")
+      );
+      const tokenHash = hash.get("tpv_sso");
+
+      if (tokenHash) {
+        // Remove the one-time credential from the browser URL immediately.
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname + window.location.search
+        );
+
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "email",
+        });
+
+        if (error) {
+          console.error("No se pudo completar el acceso desde Mi TPVMX", error);
+        }
+
+        if (alive) {
+          setSession(data.session ?? null);
+        }
+
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (alive) setSession(data.session);
+    };
+
+    void bootstrapAuth();
+
+    return () => {
+      alive = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
