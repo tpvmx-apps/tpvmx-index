@@ -24,9 +24,6 @@ const SHEET_URL =
 const CANVA_URL =
   "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/CANVA_MESES";
 
-const AVAILABILITY_URL =
-  "https://opensheet.elk.sh/1hNq4eF9r1-7ze5Jdhls4sZ3pS24Z52FafcOpNIrShhw/DISPONIBILIDAD_WEB";
-
 const GALLERY_API_URL =
   "https://tuproximoviaje.mx/api/gallery";
 
@@ -67,6 +64,13 @@ function normalizarTexto(texto: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function formatAvailabilityDateForUi(value: string) {
+  const match = String(value || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return String(value || "").trim();
+  const [, yyyy, mm, dd] = match;
+  return `${Number(dd)}/${Number(mm)}/${yyyy}`;
 }
 
 function parseAvailabilityDate(value: string) {
@@ -371,10 +375,13 @@ function App() {
     setLoading(true);
     setError("");
 
-    const [toursRes, canvaRes, availabilityRes] = await Promise.all([
+    const [toursRes, canvaRes, availabilityResult] = await Promise.all([
       fetch(SHEET_URL),
       fetch(CANVA_URL),
-      fetch(AVAILABILITY_URL).catch(() => null),
+      supabase
+        .from("index_availability")
+        .select("fecha,tour,estatus,lugares_disponibles,clave,quorum_alcanzado")
+        .order("fecha", { ascending: true }),
     ]);
 
     if (!toursRes.ok) throw new Error("No se pudo leer Google Sheets");
@@ -386,12 +393,20 @@ function App() {
     setTours(Array.isArray(toursData) ? toursData : []);
     setPlantillasCanva(Array.isArray(canvaData) ? canvaData : []);
 
-    if (availabilityRes?.ok) {
-      const availabilityData = await availabilityRes.json();
-      setDisponibilidad(Array.isArray(availabilityData) ? availabilityData : []);
-    } else {
-      console.warn("No se pudo cargar DISPONIBILIDAD_WEB.");
+    if (availabilityResult.error) {
+      console.warn("No se pudo cargar la disponibilidad privada.", availabilityResult.error);
       setDisponibilidad([]);
+    } else {
+      const availabilityData = (availabilityResult.data || []).map((row) => ({
+        FECHA: formatAvailabilityDateForUi(String(row.fecha || "")),
+        TOURS: String(row.tour || ""),
+        ESTATUS: String(row.estatus || ""),
+        "LUGARES DISPONIBLES": String(row.lugares_disponibles ?? ""),
+        CLAVE: String(row.clave || ""),
+        "QUORUM ALCANZADO": row.quorum_alcanzado ? "SI" : "NO",
+      }));
+
+      setDisponibilidad(availabilityData);
     }
 
     try {

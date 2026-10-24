@@ -67,7 +67,10 @@ export function AvailabilityPage({ rows, initialKey = "" }: Props) {
           status: String(row.ESTATUS || "").trim(),
           seats: String(row["LUGARES DISPONIBLES"] || "").trim(),
           key: String(row.CLAVE || "").trim(),
-          paxReserved: Number(String(row["PAX RESERVADOS"] || "").trim()),
+          quorumReached:
+            String(row["QUORUM ALCANZADO"] || "")
+              .trim()
+              .toUpperCase() === "SI",
         };
       })
       .filter((item) => item.date && item.dateMs !== null && item.dateMs >= todayUtc)
@@ -135,8 +138,7 @@ export function AvailabilityPage({ rows, initialKey = "" }: Props) {
               const kind = statusKind(item.status);
               const visual = statusStyles[kind];
 
-              const hasPaxReserved = Number.isFinite(item.paxReserved);
-              const quorumReached = hasPaxReserved && item.paxReserved >= 7;
+              const quorumReached = item.quorumReached;
 
               return (
                 <article key={`${item.key}-${item.date}-${index}`} style={styles.card}>
@@ -170,11 +172,9 @@ export function AvailabilityPage({ rows, initialKey = "" }: Props) {
                           color: quorumReached ? "#167452" : "#8d6400",
                         }}
                       >
-                        {hasPaxReserved
-                          ? quorumReached
-                            ? "✅ QUÓRUM ALCANZADO"
-                            : "⏳ EN PROCESO DE QUÓRUM"
-                          : "Consultar operación"}
+                        {quorumReached
+                          ? "✅ QUÓRUM ALCANZADO"
+                          : "⏳ EN PROCESO DE QUÓRUM"}
                       </strong>
                     </div>
                   </div>
