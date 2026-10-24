@@ -44,6 +44,28 @@ function clean(value: unknown) {
   return String(value ?? "").trim();
 }
 
+function prettyName(value: string) {
+  const text = clean(value);
+  if (!text) return "";
+  if (text === text.toLowerCase()) {
+    return text.replace(/(^|\s|[-'])\p{L}/gu, (letter) => letter.toUpperCase());
+  }
+  return text;
+}
+
+function normalizeWebsite(value: string) {
+  const text = clean(value);
+  if (!text) return "";
+  if (/^https?:\/\//i.test(text)) return text;
+  return `https://${text.replace(/^\/+/, "")}`;
+}
+
+function displayWebsite(value: string) {
+  return clean(value)
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/$/, "");
+}
+
 function buildLogoUrl(path: string) {
   if (!path) return "";
   const { data } = supabase.storage.from("agency-branding").getPublicUrl(path);
@@ -130,7 +152,7 @@ export function AgencyProfile({ session, agencyName, onProfileChange }: Props) {
       whatsapp: clean(form.whatsapp) || null,
       phone: clean(form.phone) || null,
       email: clean(form.email) || null,
-      website: clean(form.website) || null,
+      website: normalizeWebsite(form.website) || null,
       facebook: clean(form.facebook) || null,
       instagram: clean(form.instagram) || null,
       logo_path: clean(form.logoPath) || null,
@@ -147,9 +169,16 @@ export function AgencyProfile({ session, agencyName, onProfileChange }: Props) {
       console.error("No se pudo guardar el perfil", error);
       setMessage("No pude guardar los cambios. Intenta de nuevo.");
     } else {
+      const normalizedWebsite = String(payload.website || "");
+      setForm((current) => ({
+        ...current,
+        commercialName: String(payload.commercial_name || agencyName),
+        website: normalizedWebsite,
+      }));
       const next = {
         ...profile,
         commercialName: String(payload.commercial_name || agencyName),
+        website: normalizedWebsite,
       };
       onProfileChange(next);
       setMessage("Datos comerciales actualizados.");
@@ -198,16 +227,34 @@ export function AgencyProfile({ session, agencyName, onProfileChange }: Props) {
       await supabase.storage.from("agency-branding").remove([previousPath]);
     }
 
+    const { error: profileError } = await supabase
+      .from("agency_profiles")
+      .upsert(
+        {
+          user_id: session.user.id,
+          logo_path: path,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
+
+    if (profileError) {
+      console.error("El logo subió, pero no pude guardar su referencia", profileError);
+      setMessage("El logo subió, pero no pude terminar de guardarlo.");
+      setUploading(false);
+      return;
+    }
+
     setForm((current) => ({ ...current, logoPath: path }));
-    setMessage("Logo cargado. Guarda los cambios para aplicarlo.");
+    setMessage("Logo actualizado correctamente.");
     setUploading(false);
   }
 
-  const displayName = form.commercialName || agencyName;
+  const displayName = prettyName(form.commercialName || agencyName);
   const contactPreview = [
     form.showWhatsapp && form.whatsapp ? `WhatsApp: ${form.whatsapp}` : "",
     form.showEmail && form.email ? form.email : "",
-    form.website,
+    form.website ? displayWebsite(form.website) : "",
   ].filter(Boolean);
 
   if (loading) {
@@ -326,7 +373,7 @@ export function AgencyProfile({ session, agencyName, onProfileChange }: Props) {
             <strong>Reserva con {displayName}</strong>
             {form.showWhatsapp && form.whatsapp ? <p>📲 WhatsApp: {form.whatsapp}</p> : null}
             {form.showEmail && form.email ? <p>✉️ {form.email}</p> : null}
-            {form.website ? <p>🌐 {form.website}</p> : null}
+            {form.website ? <p>🌐 {displayWebsite(form.website)}</p> : null}
           </div>
 
           <div className="agency-profile-actions">
