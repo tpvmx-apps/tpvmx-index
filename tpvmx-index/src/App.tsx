@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { AvailabilityPage } from "./AvailabilityPage";
+import { AgencyProfile, type AgencyProfileData } from "./AgencyProfile";
 
 type Tour = Record<string, string | undefined>;
 type CanvaMes = Record<string, string | undefined>;
@@ -178,7 +179,22 @@ async function copiarTexto(texto: string, etiqueta: string) {
 function formatearMoneda(valor: string) {
   const limpio = String(valor || "").trim();
   if (!limpio) return "—";
-  return limpio.startsWith("$") ? limpio : `$${limpio}`;
+  return limpio.startsWith("$") ? limpio : `${limpio}`;
+}
+
+function personalizarCopyAgencia(texto: string, profile: AgencyProfileData | null) {
+  const base = String(texto || "").trim();
+  if (!base || !profile) return base;
+
+  const nombre = profile.commercialName || profile.agencyName;
+  const cierre = [
+    nombre ? `Reserva con ${nombre}` : "",
+    profile.showWhatsapp && profile.whatsapp ? `📲 WhatsApp: ${profile.whatsapp}` : "",
+    profile.showEmail && profile.email ? `✉️ ${profile.email}` : "",
+    profile.website ? `🌐 ${profile.website}` : "",
+  ].filter(Boolean);
+
+  return cierre.length > 0 ? `${base}\n\n${cierre.join("\n")}` : base;
 }
 
 type ActionButtonProps = {
@@ -299,7 +315,7 @@ function LoginScreen() {
         <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
         <h1 style={styles.loginTitle}>Acceso para agencias</h1>
         <p style={styles.loginSubtitle}>
-          Ingresa con tu correo y contraseña para consultar el catálogo privado.
+          Tu espacio privado para consultar producto, disponibilidad y materiales de venta.
         </p>
 
         <form onSubmit={handleLogin} style={styles.loginForm}>
@@ -344,6 +360,9 @@ function App() {
   const [estado, setEstado] = useState("");
   const [descripcionesAbiertas, setDescripcionesAbiertas] = useState<Record<string, boolean>>({});
   const [fechasAbiertas, setFechasAbiertas] = useState<Record<string, boolean>>({});
+  const [accessStatus, setAccessStatus] = useState<"checking" | "allowed" | "denied">("checking");
+  const [agencyName, setAgencyName] = useState("");
+  const [agencyProfile, setAgencyProfile] = useState<AgencyProfileData | null>(null);
   const galleryKey = useMemo(
     () => new URLSearchParams(window.location.search).get("galeria") || "",
     []
@@ -368,7 +387,42 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session) {
+      setAccessStatus("checking");
+      setAgencyName("");
+      setAgencyProfile(null);
+      return;
+    }
+
+    let alive = true;
+    setAccessStatus("checking");
+
+    supabase
+      .from("index_agencies")
+      .select("agency_name,active")
+      .eq("user_id", session.user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!alive) return;
+
+        if (error || !data || data.active !== true) {
+          if (error) console.error("No se pudo validar la agencia", error);
+          setAccessStatus("denied");
+          setAgencyName("");
+          return;
+        }
+
+        setAgencyName(String(data.agency_name || "").trim());
+        setAccessStatus("allowed");
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [session]);
+
+  useEffect(() => {
+    if (!session || accessStatus !== "allowed") return;
 
     const cargarTours = async () => {
   try {
@@ -467,7 +521,7 @@ function App() {
 };
 
     void cargarTours();
-  }, [session]);
+  }, [accessStatus, session]);
 
   const estados = useMemo(() => {
     return Array.from(
@@ -594,6 +648,37 @@ function App() {
     return <LoginScreen />;
   }
 
+  if (accessStatus === "checking") {
+    return (
+      <div style={styles.loginPage}>
+        <div style={styles.loginCard}>
+          <img src="/logoweb.png" alt="Tu Próximo Viaje MX" style={styles.loginLogo} />
+          <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
+          <h1 style={styles.loginTitle}>Preparando tu acceso</h1>
+          <p style={styles.loginSubtitle}>Validando tu cuenta de agencia…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (accessStatus === "denied") {
+    return (
+      <div style={styles.loginPage}>
+        <div style={styles.loginCard}>
+          <img src="/logoweb.png" alt="Tu Próximo Viaje MX" style={styles.loginLogo} />
+          <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
+          <h1 style={styles.loginTitle}>Acceso no habilitado</h1>
+          <p style={styles.loginSubtitle}>
+            Tu sesión existe, pero no tiene una agencia INDEX activa asociada.
+          </p>
+          <button style={styles.loginButton} onClick={() => void supabase.auth.signOut()}>
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (availabilityKey) {
     if (loading) {
       return (
@@ -655,7 +740,7 @@ function App() {
                 <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
                 <h1 style={styles.title}>INDEX TPVMX</h1>
                 <p style={styles.subtitle}>
-                  Catálogo interno para ventas, diseño y operación.
+                  {agencyName ? `${agencyName} · ` : ""}Catálogo privado para vender y operar más fácil.
                 </p>
               </div>
             </div>
@@ -670,6 +755,12 @@ function App() {
             Cerrar sesión
           </button>
         </div>
+
+        <AgencyProfile
+          session={session}
+          agencyName={agencyName}
+          onProfileChange={setAgencyProfile}
+        />
 
   {plantillasActivas.length > 0 && (
   <div style={styles.canvaSection}>
@@ -939,8 +1030,13 @@ function App() {
                   <div style={styles.actions2}>
                     <ActionButton
                       kind="primary"
-                      label="Copiar copy agencia"
-                      onClick={() => copiarTexto(copyLimpio, "copy limpio")}
+                      label="Copiar para mis clientes"
+                      onClick={() =>
+                        copiarTexto(
+                          personalizarCopyAgencia(copyLimpio, agencyProfile),
+                          "copy personalizado"
+                        )
+                      }
                     />
 
                     <ActionButton
@@ -983,11 +1079,11 @@ const styles = {
   page: {
     minHeight: "100vh",
     background:
-      "linear-gradient(135deg, #f4fbfb 0%, #ffffff 42%, #eef7fb 100%)",
+      "radial-gradient(circle at 82% 8%, rgba(62,174,174,.10), transparent 22%), linear-gradient(180deg, #fafaf7 0%, #ffffff 45%, #f2f5f4 100%)",
     fontFamily:
-      "Arial, Helvetica, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      "var(--font-body)",
     padding: "24px",
-    color: "#17354a",
+    color: "#40535b",
   },
   container: {
     maxWidth: "1200px",
@@ -1026,19 +1122,19 @@ const styles = {
     fontSize: "12px",
     letterSpacing: "0.18em",
     textTransform: "uppercase",
-    color: "#d81b60",
+    color: "#e50051",
     fontWeight: 800,
   },
   title: {
     margin: "6px 0 6px 0",
     fontSize: "38px",
-    color: "#0f6faf",
+    color: "#046dad",
     lineHeight: 1.05,
     fontWeight: 800,
   },
   subtitle: {
     margin: 0,
-    color: "#547085",
+    color: "#607078",
     fontSize: "15px",
   },
   availabilityStrip: {
@@ -1082,7 +1178,7 @@ const styles = {
   logoutButton: {
     border: "1px solid #d8eef2",
     background: "#ffffff",
-    color: "#0f6faf",
+    color: "#046dad",
     borderRadius: "14px",
     padding: "12px 16px",
     fontWeight: 700,
@@ -1096,7 +1192,7 @@ const styles = {
     borderRadius: "20px",
     padding: "18px",
     boxShadow: "0 10px 28px rgba(18, 50, 74, 0.06)",
-    border: "1px solid #cfe9ea",
+    border: "1px solid #dfe7e5",
     marginBottom: "16px",
   },
   input: {
@@ -1106,8 +1202,8 @@ const styles = {
     border: "1px solid #b9d8dc",
     fontSize: "15px",
     outline: "none",
-    color: "#17354a",
-    background: "#fbfefe",
+    color: "#40535b",
+    background: "#ffffff",
   },
 
   select: {
@@ -1117,8 +1213,8 @@ const styles = {
     border: "1px solid #b9d8dc",
     fontSize: "15px",
     outline: "none",
-    background: "#fbfefe",
-    color: "#17354a",
+    background: "#ffffff",
+    color: "#40535b",
   },
   metaRow: {
     display: "flex",
@@ -1129,7 +1225,7 @@ const styles = {
   },
   metaBadge: {
     background: "#f9dbe8",
-    color: "#b11658",
+    color: "#ba0043",
     borderRadius: "999px",
     padding: "9px 14px",
     fontSize: "13px",
@@ -1137,7 +1233,7 @@ const styles = {
   },
   infoBox: {
     background: "#ffffff",
-    border: "1px solid #d5e8ea",
+    border: "1px solid #dfe7e5",
     borderRadius: "18px",
     padding: "18px",
     color: "#486376",
@@ -1147,7 +1243,7 @@ const styles = {
     border: "1px solid #f4c4d6",
     borderRadius: "18px",
     padding: "18px",
-    color: "#b11658",
+    color: "#ba0043",
     fontWeight: 700,
   },
   grid: {
@@ -1159,10 +1255,10 @@ const styles = {
     position: "relative",
     overflow: "hidden",
     background: "#ffffff",
-    borderRadius: "26px",
+    borderRadius: "20px",
     padding: "20px",
     boxShadow: "0 10px 30px rgba(18, 50, 74, 0.07)",
-    border: "1px solid #d9ecef",
+    border: "1px solid #dfe7e5",
     transform: "translateY(0)",
     transition: "all 0.2s ease",
   },
@@ -1170,7 +1266,7 @@ const styles = {
     position: "relative",
     overflow: "hidden",
     background: "#ffffff",
-    borderRadius: "26px",
+    borderRadius: "20px",
     padding: "20px",
     boxShadow: "0 16px 34px rgba(18, 50, 74, 0.11)",
     border: "1px solid #bfe2e7",
@@ -1180,11 +1276,11 @@ const styles = {
   galleryPage: {
     minHeight: "100vh",
     background:
-      "linear-gradient(135deg, #f4fbfb 0%, #ffffff 42%, #eef7fb 100%)",
+      "radial-gradient(circle at 82% 8%, rgba(62,174,174,.10), transparent 22%), linear-gradient(180deg, #fafaf7 0%, #ffffff 45%, #f2f5f4 100%)",
     padding: "28px",
-    color: "#17354a",
+    color: "#40535b",
     fontFamily:
-      "Arial, Helvetica, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      "var(--font-body)",
   },
   galleryPageContainer: {
     maxWidth: "1100px",
@@ -1193,19 +1289,19 @@ const styles = {
   galleryBackLink: {
     display: "inline-block",
     marginBottom: "22px",
-    color: "#0f6faf",
+    color: "#046dad",
     fontWeight: 800,
     textDecoration: "none",
   },
   galleryPageTitle: {
     margin: "6px 0",
     fontSize: "34px",
-    color: "#0f3150",
+    color: "#163e55",
     fontWeight: 800,
   },
   galleryPageSubtitle: {
     margin: "0 0 22px 0",
-    color: "#547085",
+    color: "#607078",
     fontSize: "17px",
   },
   galleryGrid: {
@@ -1219,7 +1315,7 @@ const styles = {
     borderRadius: "18px",
     background: "#eaf4f6",
     aspectRatio: "4 / 3",
-    border: "1px solid #d9ecef",
+    border: "1px solid #dfe7e5",
   },
   galleryTileImage: {
     display: "block",
@@ -1234,8 +1330,7 @@ const styles = {
     left: 0,
     right: 0,
     height: "4px",
-    background:
-      "linear-gradient(90deg, #22B8B6 0%, #2D9CDB 48%, #E63B8D 100%)",
+    background: "#e50051",
     pointerEvents: "none",
   },
   cardTop: {
@@ -1246,7 +1341,7 @@ const styles = {
     gap: "10px",
   },
   claveBadge: {
-    background: "#d81b60",
+    background: "#e50051",
     color: "#fff",
     borderRadius: "999px",
     padding: "7px 13px",
@@ -1256,7 +1351,7 @@ const styles = {
   },
   estadoBadge: {
     background: "#d8eef2",
-    color: "#0f6faf",
+    color: "#046dad",
     borderRadius: "999px",
     padding: "7px 13px",
     fontSize: "12px",
@@ -1266,7 +1361,7 @@ const styles = {
     margin: "0 0 10px 0",
     fontSize: "24px",
     lineHeight: 1.18,
-    color: "#0f3150",
+    color: "#163e55",
     fontWeight: 800,
   },
   descriptionBlock: {
@@ -1283,7 +1378,7 @@ const styles = {
     padding: 0,
     border: "none",
     background: "transparent",
-    color: "#0f6faf",
+    color: "#046dad",
     fontSize: "12px",
     fontWeight: 800,
     cursor: "pointer",
@@ -1301,14 +1396,14 @@ const styles = {
     margin: "0 0 6px 0",
     fontSize: "13px",
     fontWeight: 800,
-    color: "#d81b60",
+    color: "#e50051",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
   },
   valuePre: {
     margin: 0,
     whiteSpace: "pre-line" as const,
-    color: "#0f3150",
+    color: "#163e55",
     fontSize: "15px",
     lineHeight: 1.45,
   },
@@ -1325,7 +1420,7 @@ const styles = {
   nextAvailabilityLabel: {
     display: "block",
     marginBottom: "3px",
-    color: "#547085",
+    color: "#607078",
     fontSize: "11px",
     fontWeight: 800,
     textTransform: "uppercase",
@@ -1339,7 +1434,7 @@ const styles = {
   },
   nextAvailabilityDate: {
     flexShrink: 0,
-    color: "#0f3150",
+    color: "#163e55",
     fontSize: "12px",
     fontWeight: 800,
     whiteSpace: "nowrap",
@@ -1351,15 +1446,15 @@ const styles = {
     marginBottom: "16px",
   },
   priceBox: {
-    background: "#eef7f8",
+    background: "#f2f5f4",
     borderRadius: "18px",
     padding: "14px",
-    border: "1px solid #d7eaed",
+    border: "1px solid #dfe7e5",
   },
   priceLabel: {
     display: "block",
     fontSize: "12px",
-    color: "#0f6faf",
+    color: "#046dad",
     fontWeight: 800,
     marginBottom: "5px",
     textTransform: "uppercase",
@@ -1367,7 +1462,7 @@ const styles = {
   },
   priceValue: {
     fontSize: "20px",
-    color: "#0f3150",
+    color: "#163e55",
     fontWeight: 800,
   },
   actions2: {
@@ -1384,7 +1479,7 @@ const styles = {
     borderTop: "1px solid #e4eef0",
   },
   resourceLink: {
-    color: "#0f6faf",
+    color: "#046dad",
     fontSize: "13px",
     fontWeight: 800,
     textDecoration: "none",
@@ -1393,22 +1488,22 @@ const styles = {
     border: "none",
     borderRadius: "16px",
     padding: "13px 14px",
-    background: "#d81b60",
+    background: "#3eaeae",
     color: "#fff",
     fontWeight: 800,
     cursor: "pointer",
-    boxShadow: "0 8px 18px rgba(216, 27, 96, 0.16)",
+    boxShadow: "0 8px 18px rgba(35, 142, 137, 0.14)",
     transition: "all 0.2s ease",
   },
   primaryButtonHover: {
     border: "none",
     borderRadius: "16px",
     padding: "13px 14px",
-    background: "#b11658",
+    background: "#238e89",
     color: "#fff",
     fontWeight: 800,
     cursor: "pointer",
-    boxShadow: "0 12px 20px rgba(177, 22, 88, 0.22)",
+    boxShadow: "0 12px 20px rgba(35, 142, 137, 0.20)",
     transform: "translateY(-2px)",
     transition: "all 0.2s ease",
   },
@@ -1417,7 +1512,7 @@ const styles = {
     borderRadius: "16px",
     padding: "13px 14px",
     background: "#dff2f4",
-    color: "#0f6faf",
+    color: "#046dad",
     fontWeight: 800,
     cursor: "pointer",
     transition: "all 0.2s ease",
@@ -1439,7 +1534,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     background:
-      "linear-gradient(135deg, #f4fbfb 0%, #ffffff 42%, #eef7fb 100%)",
+      "radial-gradient(circle at 82% 8%, rgba(62,174,174,.10), transparent 22%), linear-gradient(180deg, #fafaf7 0%, #ffffff 45%, #f2f5f4 100%)",
     padding: "24px",
   },
   loginCard: {
@@ -1449,7 +1544,7 @@ const styles = {
     borderRadius: "28px",
     padding: "32px",
     boxShadow: "0 20px 40px rgba(18, 50, 74, 0.10)",
-    border: "1px solid #d9ecef",
+    border: "1px solid #dfe7e5",
     textAlign: "center" as const,
   },
   loginLogo: {
@@ -1461,12 +1556,12 @@ const styles = {
   loginTitle: {
     margin: "8px 0",
     fontSize: "30px",
-    color: "#0f3150",
+    color: "#163e55",
     fontWeight: 800,
   },
   loginSubtitle: {
     margin: "0 0 22px 0",
-    color: "#547085",
+    color: "#607078",
     fontSize: "15px",
     lineHeight: 1.5,
   },
@@ -1478,7 +1573,7 @@ const styles = {
     border: "none",
     borderRadius: "16px",
     padding: "14px",
-    background: "#d81b60",
+    background: "#e50051",
     color: "#fff",
     fontWeight: 800,
     cursor: "pointer",
@@ -1486,7 +1581,7 @@ const styles = {
   },
   loginError: {
     marginTop: "14px",
-    color: "#b11658",
+    color: "#ba0043",
     fontWeight: 700,
     fontSize: "14px",
   },
@@ -1495,14 +1590,14 @@ canvaSection: {
   borderRadius: "20px",
   padding: "18px",
   marginBottom: "16px",
-  border: "1px solid #cfe9ea",
+  border: "1px solid #dfe7e5",
   boxShadow: "0 10px 28px rgba(18, 50, 74, 0.06)",
 },
 
 canvaTitle: {
   margin: "0 0 12px 0",
   fontWeight: 800,
-  color: "#d81b60",
+  color: "#e50051",
   fontSize: "14px",
   textTransform: "uppercase" as const,
   letterSpacing: "0.05em",
@@ -1521,7 +1616,7 @@ canvaButton: {
   background: "#dff2f4",
   textDecoration: "none",
   fontWeight: 700,
-  color: "#0f6faf",
+  color: "#046dad",
   border: "1px solid #a8d8df",
 },
 } satisfies Record<string, import("react").CSSProperties>;
