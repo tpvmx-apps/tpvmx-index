@@ -395,6 +395,17 @@ function App() {
           window.location.pathname + window.location.search
         );
 
+        // A browser may still hold a stale INDEX refresh token from a prior
+        // session. Stop automatic refresh and clear only the local INDEX
+        // session before redeeming the fresh one-time handoff.
+        supabase.auth.stopAutoRefresh();
+
+        try {
+          await supabase.auth.signOut({ scope: "local" });
+        } catch (signOutError) {
+          console.warn("No se pudo limpiar la sesión local anterior", signOutError);
+        }
+
         const { data, error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type: "email",
@@ -402,7 +413,26 @@ function App() {
 
         if (error) {
           console.error("No se pudo completar el acceso desde Mi TPVMX", error);
+          if (alive) setSession(null);
+          supabase.auth.startAutoRefresh();
+          return;
         }
+
+        if (data.session) {
+          const { error: setSessionError } = await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+
+          if (setSessionError) {
+            console.error(
+              "No se pudo fijar la sesión recibida desde Mi TPVMX",
+              setSessionError
+            );
+          }
+        }
+
+        supabase.auth.startAutoRefresh();
 
         if (alive) {
           setSession(data.session ?? null);
