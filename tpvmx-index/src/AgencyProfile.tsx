@@ -104,12 +104,12 @@ export function AgencyProfile({ session, agencyName, onProfileChange }: Props) {
         setMessage("No pude cargar tus datos comerciales.");
       } else if (data) {
         setForm({
-          commercialName: clean(data.commercial_name),
+          commercialName: prettyName(clean(data.commercial_name)),
           advisorName: clean(data.advisor_name),
           whatsapp: clean(data.whatsapp),
           phone: clean(data.phone),
           email: clean(data.email),
-          website: clean(data.website),
+          website: normalizeWebsite(clean(data.website)),
           facebook: clean(data.facebook),
           instagram: clean(data.instagram),
           logoPath: clean(data.logo_path),
@@ -119,7 +119,7 @@ export function AgencyProfile({ session, agencyName, onProfileChange }: Props) {
       } else {
         setForm((current) => ({
           ...current,
-          commercialName: agencyName,
+          commercialName: prettyName(agencyName),
           email: clean(session.user.email),
         }));
       }
@@ -147,7 +147,7 @@ export function AgencyProfile({ session, agencyName, onProfileChange }: Props) {
 
     const payload = {
       user_id: session.user.id,
-      commercial_name: clean(form.commercialName) || agencyName,
+      commercial_name: prettyName(clean(form.commercialName) || agencyName),
       advisor_name: clean(form.advisorName) || null,
       whatsapp: clean(form.whatsapp) || null,
       phone: clean(form.phone) || null,
