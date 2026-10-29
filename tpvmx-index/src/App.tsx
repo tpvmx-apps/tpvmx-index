@@ -906,6 +906,8 @@ function App() {
           <div style={styles.grid}>
             {toursFiltrados.map((tour, i) => {
               const clave = getField(tour, ["CLAVE"]);
+              const claveOperativa =
+                getField(tour, ["CLAVE FIJA", "CLAVE_FIJA"]) || clave;
               const nombre = getField(tour, ["TOUR"]) || "Tour sin nombre";
               const estadoTour = getField(tour, ["ESTADO"]) || "Sin estado";
               const descripcion =
@@ -937,10 +939,11 @@ function App() {
               const precio = formatearMoneda(getField(tour, ["PRECIO", "O"]));
               const reserva = formatearMoneda(getField(tour, ["RESERVA", "P"]));
               const claveNormalizada = normalizarClave(clave);
+              const claveOperativaNormalizada = normalizarClave(claveOperativa);
               const galleryImages =
                 galeriasPorClave.get(claveNormalizada) || [];
               const proximaDisponibilidad =
-                disponibilidadPorClave.get(claveNormalizada)?.[0] || null;
+                disponibilidadPorClave.get(claveOperativaNormalizada)?.[0] || null;
               const disponibilidadVista = proximaDisponibilidad
                 ? disponibilidadVisual(proximaDisponibilidad.status)
                 : null;
@@ -1126,7 +1129,7 @@ function App() {
                     ) : null}
 
                     <a
-                      href={`?disponibilidad=${encodeURIComponent(clave || "1")}`}
+                      href={`?disponibilidad=${encodeURIComponent(claveOperativa || "1")}`}
                       style={styles.resourceLink}
                     >
                       🟢 Ver disponibilidad completa
