@@ -283,6 +283,7 @@ function GalleryPage({
 function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [loginError, setLoginError] = useState("");
 
@@ -328,14 +329,39 @@ function LoginScreen() {
             required
           />
 
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={styles.input}
-            required
-          />
+          <div style={{ position: "relative", width: "100%" }}>
+            <input
+              type={showPassword ? "text" : "password"}
+              aria-label="Contraseña"
+              autoComplete="current-password"
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ ...styles.input, paddingRight: "62px", boxSizing: "border-box" }}
+              required
+            />
+            <button
+              type="button"
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-pressed={showPassword}
+              title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              onClick={() => setShowPassword((visible) => !visible)}
+              style={{
+                position: "absolute", top: "50%", right: "4px",
+                transform: "translateY(-50%)", display: "grid",
+                placeItems: "center", width: "44px", height: "44px",
+                padding: 0, border: "none", borderRadius: "10px",
+                background: "transparent", color: "#0b6f83", cursor: "pointer"
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+                stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                <circle cx="12" cy="12" r="2.7" />
+                {showPassword && <path d="M3 21 21 3" />}
+              </svg>
+            </button>
+          </div>
 
           <button type="submit" style={styles.loginButton} disabled={loadingLogin}>
             {loadingLogin ? "Entrando..." : "Entrar"}
