@@ -1035,6 +1035,7 @@ function App() {
               return (
                 <div
                   key={`${clave || "tour"}-${i}`}
+                  className="tpv-index-tour-card"
                   style={styles.card}
                   onMouseEnter={(e) => {
                     Object.assign(e.currentTarget.style, styles.cardHover);
@@ -1044,12 +1045,18 @@ function App() {
                   }}
                 >
                   <div style={styles.cardAccent} aria-hidden="true" />
-                  <div style={styles.cardTop}>
+                  {galleryImages[0] ? (
+                    <div className="tpv-index-tour-cover">
+                      <img src={galleryImages[0]} alt="" loading="lazy" decoding="async" />
+                      <span className="tpv-index-cover-caption">EXPERIENCIA TPVMX</span>
+                    </div>
+                  ) : null}
+                  <div className="tpv-index-card-top" style={styles.cardTop}>
                     <span style={styles.claveBadge}>{clave || "—"}</span>
                     <span style={styles.estadoBadge}>{estadoTour}</span>
                   </div>
 
-                  <h2 style={styles.cardTitle}>{nombre}</h2>
+                  <h2 className="tpv-index-tour-title" style={styles.cardTitle}>{nombre}</h2>
 
                   {descripcion ? (
                     <div style={styles.descriptionBlock}>
@@ -1120,7 +1127,7 @@ function App() {
                             color: disponibilidadVista.color,
                           }}
                         >
-                          {disponibilidadVista.icon}{" "}
+                          <span className="tpv-index-status-dot" aria-hidden="true" style={{backgroundColor:disponibilidadVista.color}} />{" "}
                           {disponibilidadTexto(proximaDisponibilidad)}
                         </strong>
                       </div>
@@ -1130,7 +1137,7 @@ function App() {
                     </div>
                   ) : null}
 
-                  <div style={styles.priceRow}>
+                  <div className="tpv-index-prices" style={styles.priceRow}>
                     <div style={styles.priceBox}>
                       <span style={styles.priceLabel}>Precio</span>
                       <span style={styles.priceValue}>{precio}</span>
@@ -1142,7 +1149,7 @@ function App() {
                     </div>
                   </div>
 
-                  <div style={styles.actions2}>
+                  <div className="tpv-index-actions" style={styles.actions2}>
                     <ActionButton
                       kind="primary"
                       label="Copiar para mis clientes"
@@ -1161,23 +1168,25 @@ function App() {
                     />
                   </div>
 
-                  <div style={styles.resourceLinks}>
+                  <div className="tpv-index-resources" style={styles.resourceLinks}>
                     {galleryImages.length > 0 ? (
                       <a
                         href={`?galeria=${encodeURIComponent(clave)}`}
                         target="_blank"
                         rel="noreferrer"
+                        className="tpv-index-resource-link"
                         style={styles.resourceLink}
                       >
-                        📷 Galería de fotos
+                        <IndexIcon name="gallery" size={18}/> Galería de fotos
                       </a>
                     ) : null}
 
                     <a
                       href={`?disponibilidad=${encodeURIComponent(claveOperativa || "1")}`}
-                      style={styles.resourceLink}
+                      className="tpv-index-resource-link"
+                        style={styles.resourceLink}
                     >
-                      🟢 Ver disponibilidad completa
+                      <IndexIcon name="availability" size={18}/> Ver disponibilidad completa
                     </a>
                   </div>
                 </div>
@@ -1186,6 +1195,7 @@ function App() {
           </div>
         )}
       </div>
+      <footer className="tpv-index-footer">INDEX TPVMX · Herramientas comerciales para agencias aliadas <a href="https://tuproximoviaje.mx/" target="_blank" rel="noreferrer">Visitar TPVMX</a></footer>
     </div>
   );
 }
