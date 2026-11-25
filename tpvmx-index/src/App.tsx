@@ -3,6 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { AvailabilityPage } from "./AvailabilityPage";
 import { AgencyProfile, type AgencyProfileData } from "./AgencyProfile";
+import { IndexIcon } from "./IndexIcon";
 
 type Tour = Record<string, string | undefined>;
 type CanvaMes = Record<string, string | undefined>;
@@ -214,6 +215,7 @@ function ActionButton({ label, kind, onClick }: ActionButtonProps) {
 
   return (
     <button
+      className={"tpv-index-action tpv-index-action-" + kind}
       style={baseStyle}
       onClick={onClick}
       onMouseEnter={(e) => {
@@ -223,7 +225,7 @@ function ActionButton({ label, kind, onClick }: ActionButtonProps) {
         Object.assign(e.currentTarget.style, baseStyle);
       }}
     >
-      {label}
+      <IndexIcon name="copy" size={18}/><span>{label}</span>
     </button>
   );
 }
@@ -241,14 +243,14 @@ function GalleryPage({
   );
 
   return (
-    <div style={styles.galleryPage}>
-      <div style={styles.galleryPageContainer}>
+    <div className="tpv-index-v2 tpv-index-gallery" style={styles.galleryPage}>
+      <div className="tpv-index-container tpv-index-gallery-shell" style={styles.galleryPageContainer}>
         <a href={window.location.pathname} style={styles.galleryBackLink}>
           ← Volver al INDEX
         </a>
 
         <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
-        <h1 style={styles.galleryPageTitle}>Galería de fotos</h1>
+        <h1 className="tpv-index-gallery-title" style={styles.galleryPageTitle}>Galería de fotos</h1>
         <p style={styles.galleryPageSubtitle}>{tourName}</p>
 
         {cleanImages.length === 0 ? (
@@ -256,13 +258,14 @@ function GalleryPage({
             Este tour todavía no tiene fotografías disponibles.
           </div>
         ) : (
-          <div style={styles.galleryGrid}>
+          <div className="tpv-index-gallery-grid" style={styles.galleryGrid}>
             {cleanImages.map((image, index) => (
               <a
                 key={image}
                 href={image}
                 target="_blank"
                 rel="noreferrer"
+                className="tpv-index-gallery-tile"
                 style={styles.galleryTile}
               >
                 <img
@@ -305,8 +308,8 @@ function LoginScreen() {
   };
 
   return (
-    <div style={styles.loginPage}>
-      <div style={styles.loginCard}>
+    <div className="tpv-index-v2 tpv-index-login" style={styles.loginPage}>
+      <div className="tpv-index-login-card" style={styles.loginCard}>
         <img
           src="/logoweb.png"
           alt="Tu Próximo Viaje MX"
@@ -314,7 +317,7 @@ function LoginScreen() {
         />
 
         <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
-        <h1 style={styles.loginTitle}>Acceso para agencias</h1>
+        <h1 className="tpv-index-login-title" style={styles.loginTitle}>Acceso para agencias</h1>
         <p style={styles.loginSubtitle}>
           Tu espacio privado para consultar producto, disponibilidad y materiales de venta.
         </p>
@@ -322,6 +325,8 @@ function LoginScreen() {
         <form onSubmit={handleLogin} style={styles.loginForm}>
           <input
             type="email"
+            aria-label="Correo electrónico de acceso"
+            autoComplete="username"
             placeholder="Correo electrónico"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -367,6 +372,7 @@ function LoginScreen() {
             {loadingLogin ? "Entrando..." : "Entrar"}
           </button>
         </form>
+        <p className="tpv-index-login-footnote">Herramientas de venta y operación de Tu Próximo Viaje MX.</p>
 
         {loginError ? <p style={styles.loginError}>{loginError}</p> : null}
       </div>
@@ -743,8 +749,8 @@ function App() {
 
   if (accessStatus === "checking") {
     return (
-      <div style={styles.loginPage}>
-        <div style={styles.loginCard}>
+      <div className="tpv-index-v2 tpv-index-login" style={styles.loginPage}>
+        <div className="tpv-index-login-card" style={styles.loginCard}>
           <img src="/logoweb.png" alt="Tu Próximo Viaje MX" style={styles.loginLogo} />
           <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
           <h1 style={styles.loginTitle}>Preparando tu acceso</h1>
@@ -756,8 +762,8 @@ function App() {
 
   if (accessStatus === "denied") {
     return (
-      <div style={styles.loginPage}>
-        <div style={styles.loginCard}>
+      <div className="tpv-index-v2 tpv-index-login" style={styles.loginPage}>
+        <div className="tpv-index-login-card" style={styles.loginCard}>
           <img src="/logoweb.png" alt="Tu Próximo Viaje MX" style={styles.loginLogo} />
           <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
           <h1 style={styles.loginTitle}>Acceso no habilitado</h1>
@@ -775,8 +781,8 @@ function App() {
   if (availabilityKey) {
     if (loading) {
       return (
-        <div style={styles.page}>
-          <div style={styles.container}>
+        <div className="tpv-index-v2 tpv-index-page" style={styles.page}>
+          <div className="tpv-index-container" style={styles.container}>
             <div style={styles.infoBox}>Cargando disponibilidad...</div>
           </div>
         </div>
@@ -806,8 +812,8 @@ function App() {
 
     if (loading) {
       return (
-        <div style={styles.page}>
-          <div style={styles.container}>
+        <div className="tpv-index-v2 tpv-index-page" style={styles.page}>
+          <div className="tpv-index-container" style={styles.container}>
             <div style={styles.infoBox}>Cargando galería...</div>
           </div>
         </div>
@@ -818,28 +824,30 @@ function App() {
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.topBar}>
-          <div style={styles.header}>
-            <div style={styles.brandBlock}>
+    <div className="tpv-index-v2 tpv-index-page" style={styles.page}>
+      <div className="tpv-index-container" style={styles.container}>
+        <div className="tpv-index-topbar" style={styles.topBar}>
+          <div className="tpv-index-header" style={styles.header}>
+            <div className="tpv-index-brand-block" style={styles.brandBlock}>
               <img
                 src="/logoweb.png"
                 alt="Tu Próximo Viaje MX"
+                className="tpv-index-logo"
                 style={styles.logo}
               />
 
               <div>
-                <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
-                <h1 style={styles.title}>INDEX TPVMX</h1>
-                <p style={styles.subtitle}>
-                  {agencyName ? `${agencyName} · ` : ""}Catálogo privado para vender y operar más fácil.
+                <p className="tpv-index-eyebrow" style={styles.brand}>TU PRÓXIMO VIAJE MX · PORTAL PRIVADO</p>
+                <h1 className="tpv-index-main-title" style={styles.title}>INDEX TPVMX</h1>
+                <p className="tpv-index-subtitle" style={styles.subtitle}>
+                  {agencyName ? `${agencyName} · ` : ""}Catálogo, materiales y disponibilidad en un mismo lugar.
                 </p>
               </div>
             </div>
           </div>
 
           <button
+            className="tpv-index-logout"
             style={styles.logoutButton}
             onClick={async () => {
               await supabase.auth.signOut();
@@ -856,8 +864,8 @@ function App() {
         />
 
   {plantillasActivas.length > 0 && (
-  <div style={styles.canvaSection}>
-    <p style={styles.canvaTitle}>Plantillas de diseño por mes</p>
+  <div className="tpv-index-templates" style={styles.canvaSection}>
+    <p className="tpv-index-templates-title" style={styles.canvaTitle}><IndexIcon name="briefcase" size={19}/> Plantillas de diseño por mes</p>
 
     <div style={styles.canvaButtons}>
       {plantillasActivas.map((item, i) => (
@@ -866,6 +874,7 @@ function App() {
           href={item.LINK}
           target="_blank"
           rel="noreferrer"
+          className="tpv-index-template-link"
           style={styles.canvaButton}
         >
           {item.ETIQUETA || item.MES || "Ver plantilla"}
@@ -875,9 +884,9 @@ function App() {
   </div>
 )}
 
-        <div style={styles.availabilityStrip}>
+        <div className="tpv-index-availability-strip" style={styles.availabilityStrip}>
           <div>
-            <p style={styles.availabilityStripEyebrow}>DISPONIBILIDAD DE SALIDAS</p>
+            <p className="tpv-index-availability-eyebrow" style={styles.availabilityStripEyebrow}>DISPONIBILIDAD DE SALIDAS</p>
             <p style={styles.availabilityStripText}>
               Consulta lugares disponibles y estatus de quórum de las próximas salidas.
             </p>
@@ -885,15 +894,24 @@ function App() {
 
           <a
             href="?disponibilidad=1"
+            className="tpv-index-availability-cta"
             style={styles.availabilityStripButton}
           >
-            🟢 Consultar disponibilidad
+            <IndexIcon name="availability" size={20}/> Consultar disponibilidad
           </a>
         </div>
 
-        <div style={styles.filtersBox}>
+        <div className="tpv-index-catalog-intro">
+          <div>
+            <p className="tpv-index-section-kicker">CATÁLOGO COMERCIAL</p>
+            <h2>Encuentra la experiencia ideal para tus viajeros.</h2>
+            <p>Consulta cada salida, comparte materiales y verifica disponibilidad antes de cerrar una venta.</p>
+          </div>
+        </div>
+        <div className="tpv-index-filters" style={styles.filtersBox}>
           <input
-            type="text"
+            type="search"
+            aria-label="Buscar tour, clave o fecha"
             placeholder="Buscar por tour, clave o fecha..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
@@ -901,6 +919,7 @@ function App() {
           />
 
           <select
+            aria-label="Filtrar por estado"
             value={estado}
             onChange={(e) => setEstado(e.target.value)}
             style={styles.select}
@@ -915,7 +934,7 @@ function App() {
 
 </div>
 
-<div style={styles.metaRow}>
+<div className="tpv-index-results" style={styles.metaRow} role="status" aria-live="polite">
           <span style={styles.metaBadge}>
             Tours encontrados: {toursFiltrados.length}
           </span>
@@ -929,7 +948,7 @@ function App() {
         )}
 
         {!loading && !error && toursFiltrados.length > 0 && (
-          <div style={styles.grid}>
+          <div className="tpv-index-cards" style={styles.grid}>
             {toursFiltrados.map((tour, i) => {
               const clave = getField(tour, ["CLAVE"]);
               const claveOperativa =
