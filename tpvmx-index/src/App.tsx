@@ -840,7 +840,7 @@ function App() {
                 <p className="tpv-index-eyebrow" style={styles.brand}>TU PRÓXIMO VIAJE MX · PORTAL PRIVADO</p>
                 <h1 className="tpv-index-main-title" style={styles.title}>INDEX TPVMX</h1>
                 <p className="tpv-index-subtitle" style={styles.subtitle}>
-                  {agencyName ? `${agencyName} · ` : ""}Catálogo, materiales y disponibilidad en un mismo lugar.
+                  {agencyProfile?.commercialName || agencyName ? `${agencyProfile?.commercialName || agencyName} · ` : ""}Materiales y disponibilidad.
                 </p>
               </div>
             </div>
