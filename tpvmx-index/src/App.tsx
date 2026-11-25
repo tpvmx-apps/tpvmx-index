@@ -162,18 +162,17 @@ function esSinFecha(valor: string) {
   );
 }
 
-async function copiarTexto(texto: string, etiqueta: string) {
+async function copiarTexto(texto: string, etiqueta: string): Promise<{ ok: boolean; message: string }> {
   if (!texto || !texto.trim()) {
-    alert(`No hay ${etiqueta} disponible para copiar.`);
-    return;
+    return { ok: false, message: `No hay ${etiqueta} disponible para copiar.` };
   }
 
   try {
     await navigator.clipboard.writeText(texto);
-    alert(`${etiqueta} copiado ✅`);
+    return { ok: true, message: `${etiqueta} copiado correctamente.` };
   } catch (error) {
     console.error(error);
-    alert(`No pude copiar el ${etiqueta}.`);
+    return { ok: false, message: `No pude copiar el ${etiqueta}. Vuelve a intentarlo.` };
   }
 }
 
@@ -390,6 +389,7 @@ function App() {
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [estado, setEstado] = useState("");
+  const [copyFeedback, setCopyFeedback] = useState<{ cardKey: string; ok: boolean; message: string } | null>(null);
   const [descripcionesAbiertas, setDescripcionesAbiertas] = useState<Record<string, boolean>>({});
   const [fechasAbiertas, setFechasAbiertas] = useState<Record<string, boolean>>({});
   const [accessStatus, setAccessStatus] = useState<"checking" | "allowed" | "denied">("checking");
@@ -890,7 +890,7 @@ function App() {
           <div>
             <p className="tpv-index-availability-eyebrow" style={styles.availabilityStripEyebrow}>CUPO Y QUÓRUM</p>
             <p style={styles.availabilityStripText}>
-              Revisa los espacios disponibles por salida, con información actualizada del CONTROL.
+              Consulta los espacios y el quórum reportados para las próximas salidas.
             </p>
           </div>
 
@@ -941,6 +941,18 @@ function App() {
           <span style={styles.metaBadge}>
             {toursFiltrados.length} experiencias encontradas
           </span>
+          {(busqueda || estado) ? (
+            <button
+              className="tpv-index-clear-filters"
+              type="button"
+              onClick={() => {
+                setBusqueda("");
+                setEstado("");
+              }}
+            >
+              Limpiar filtros
+            </button>
+          ) : null}
         </div>
 
         {loading && <div style={styles.infoBox}>Cargando tours...</div>}
@@ -1156,20 +1168,30 @@ function App() {
                     <ActionButton
                       kind="primary"
                       label="Copiar para mis clientes"
-                      onClick={() =>
-                        copiarTexto(
+                      onClick={async () => {
+                        const result = await copiarTexto(
                           personalizarCopyAgencia(copyLimpio, agencyProfile),
                           "copy personalizado"
-                        )
-                      }
+                        );
+                        setCopyFeedback({ cardKey, ...result });
+                      }}
                     />
 
                     <ActionButton
                       kind="secondary"
                       label="Copiar copy TPVMX"
-                      onClick={() => copiarTexto(copyEmojis, "copy con emojis")}
+                      onClick={async () => {
+                        const result = await copiarTexto(copyEmojis, "copy con emojis");
+                        setCopyFeedback({ cardKey, ...result });
+                      }}
                     />
                   </div>
+                  {copyFeedback?.cardKey === cardKey ? (
+                    <p className={"tpv-index-copy-feedback " + (copyFeedback.ok ? "is-success" : "is-error")} role="status" aria-live="polite">
+                      <IndexIcon name={copyFeedback.ok ? "check" : "shield"} size={17} />
+                      {copyFeedback.message}
+                    </p>
+                  ) : null}
 
                   <div className="tpv-index-resources" style={styles.resourceLinks}>
                     {galleryImages.length > 0 ? (
