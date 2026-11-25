@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { IndexIcon } from "./IndexIcon";
 
 type AvailabilityRow = Record<string, string | undefined>;
 
@@ -91,49 +92,50 @@ export function AvailabilityPage({ rows, initialKey = "" }: Props) {
   }, [safeRows, query, filter]);
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.topBar}>
+    <div className="tpv-index-v2 tpv-index-stock-page" style={styles.page}>
+      <div className="tpv-index-container" style={styles.container}>
+        <div className="tpv-index-stock-topbar" style={styles.topBar}>
           <a href={window.location.pathname} style={styles.backLink}>
             ← Volver al catálogo
           </a>
-          <span style={styles.privateBadge}>🔒 Acceso privado para agencias</span>
+          <span className="tpv-index-private-badge" style={styles.privateBadge}><IndexIcon name="shield" size={17}/> Acceso privado para agencias</span>
         </div>
 
-        <section style={styles.hero}>
+        <section className="tpv-index-stock-hero" style={styles.hero}>
           <img src="/logoweb.png" alt="Tu Próximo Viaje MX" style={styles.logo} />
           <div>
             <p style={styles.brand}>TU PRÓXIMO VIAJE MX</p>
-            <h1 style={styles.title}>Disponibilidad de salidas</h1>
+            <h1 className="tpv-index-stock-title" style={styles.title}>Disponibilidad de salidas</h1>
             <p style={styles.subtitle}>
               Consulta fechas y lugares disponibles sin salir de INDEX.
             </p>
           </div>
         </section>
 
-        <section style={styles.filters}>
+        <section className="tpv-index-stock-filters" style={styles.filters}>
           <input
-            type="text"
+            type="search"
+            aria-label="Buscar tour, clave o fecha"
             placeholder="Buscar tour, clave o fecha..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             style={styles.input}
           />
 
-          <div style={styles.filterRow}>
+          <div className="tpv-index-stock-filter-row" style={styles.filterRow} role="group" aria-label="Filtrar disponibilidad">
             <FilterButton label="Todas" active={filter === "all"} onClick={() => setFilter("all")} />
-            <FilterButton label="🟢 Alta" active={filter === "high"} onClick={() => setFilter("high")} />
-            <FilterButton label="🟡 Pocos espacios" active={filter === "low"} onClick={() => setFilter("low")} />
-            <FilterButton label="🔴 No disponible" active={filter === "closed"} onClick={() => setFilter("closed")} />
+            <FilterButton label="Alta" tone="high" active={filter === "high"} onClick={() => setFilter("high")} />
+            <FilterButton label="Pocos espacios" tone="low" active={filter === "low"} onClick={() => setFilter("low")} />
+            <FilterButton label="No disponible" tone="closed" active={filter === "closed"} onClick={() => setFilter("closed")} />
           </div>
         </section>
 
-        <div style={styles.meta}>{filteredRows.length} salidas encontradas</div>
+        <div className="tpv-index-stock-results" role="status" aria-live="polite" style={styles.meta}>{filteredRows.length} salidas encontradas</div>
 
         {filteredRows.length === 0 ? (
           <div style={styles.empty}>No hay salidas que coincidan con los filtros.</div>
         ) : (
-          <div style={styles.grid}>
+          <div className="tpv-index-stock-grid" style={styles.grid}>
             {filteredRows.map((item, index) => {
               const kind = statusKind(item.status);
               const visual = statusStyles[kind];
@@ -141,16 +143,17 @@ export function AvailabilityPage({ rows, initialKey = "" }: Props) {
               const quorumReached = item.quorumReached;
 
               return (
-                <article key={`${item.key}-${item.date}-${index}`} style={styles.card}>
+                <article className="tpv-index-stock-card" key={`${item.key}-${item.date}-${index}`} style={styles.card}>
                   <div style={styles.cardHeader}>
                     <div style={styles.cardMain}>
-                      <div style={styles.date}>📅 {item.date}</div>
-                      <h2 style={styles.tourTitle}>{item.tour || "Tour sin nombre"}</h2>
+                      <div className="tpv-index-stock-date" style={styles.date}><IndexIcon name="calendar" size={17}/> {item.date}</div>
+                      <h2 className="tpv-index-stock-tour" style={styles.tourTitle}>{item.tour || "Tour sin nombre"}</h2>
                     </div>
 
                     <div style={styles.cardStatusColumn}>
-                      <span style={{ ...styles.statusBadge, ...visual.badge }}>
-                        {visual.dot} {cleanStatus(item.status) || visual.fallback}
+                      <span className="tpv-index-stock-status" style={{ ...styles.statusBadge, ...visual.badge }}>
+                        <span aria-hidden="true" className="tpv-index-status-dot" style={{backgroundColor:visual.color}} />
+                        {cleanStatus(item.status) || visual.fallback}
                       </span>
                       {item.key ? <span style={styles.keyBadge}>{item.key}</span> : null}
                     </div>
@@ -173,8 +176,8 @@ export function AvailabilityPage({ rows, initialKey = "" }: Props) {
                         }}
                       >
                         {quorumReached
-                          ? "✅ QUÓRUM ALCANZADO"
-                          : "⏳ EN PROCESO DE QUÓRUM"}
+                          ? "QUÓRUM ALCANZADO"
+                          : "EN PROCESO DE QUÓRUM"}
                       </strong>
                     </div>
                   </div>
@@ -196,20 +199,25 @@ function FilterButton({
   label,
   active,
   onClick,
+  tone,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
+  tone?: "high" | "low" | "closed";
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
+      className="tpv-index-stock-filter"
       style={{
         ...styles.filterButton,
         ...(active ? styles.filterButtonActive : {}),
       }}
     >
+      {tone ? <span className="tpv-index-status-dot" data-tone={tone} aria-hidden="true"/> : null}
       {label}
     </button>
   );
@@ -217,7 +225,6 @@ function FilterButton({
 
 const statusStyles = {
   high: {
-    dot: "🟢",
     fallback: "DISPONIBILIDAD ALTA",
     color: "#167452",
     badge: {
@@ -227,7 +234,6 @@ const statusStyles = {
     },
   },
   low: {
-    dot: "🟡",
     fallback: "POCOS ESPACIOS",
     color: "#8d6400",
     badge: {
@@ -237,7 +243,6 @@ const statusStyles = {
     },
   },
   closed: {
-    dot: "🔴",
     fallback: "NO DISPONIBLE",
     color: "#a9194b",
     badge: {
