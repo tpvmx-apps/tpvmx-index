@@ -289,7 +289,7 @@ export function AgencyProfile({ session, agencyName, onProfileChange }: Props) {
           className="agency-profile-edit"
           onClick={() => setEditing((current) => !current)}
         >
-          {editing ? "Cerrar" : "Editar mi agencia"}
+          {editing ? "Cerrar" : "Editar"}
         </button>
       </div>
 
