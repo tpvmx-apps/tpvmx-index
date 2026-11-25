@@ -411,3 +411,70 @@
   .tpv-index-v2 *{scroll-behavior:auto!important;transition:none!important;}
   .tpv-index-tour-card:hover .tpv-index-tour-cover img{transform:none;}
 }
+
+/* V2.1 · Ajuste con captura de móvil 25/11: menos cabecera, más espacio útil. */
+@media (max-width:520px){
+  .tpv-index-topbar{
+    padding:14px 15px!important;
+    gap:10px!important;
+    margin-bottom:13px!important;
+    border-radius:14px!important;
+  }
+  .tpv-index-brand-block{gap:10px!important;}
+  .tpv-index-logo{
+    width:49px!important;height:49px!important;
+    border-radius:9px!important;
+    padding:5px!important;
+  }
+  .tpv-index-eyebrow{
+    font-size:9px!important;
+    letter-spacing:.055em!important;
+    line-height:1.25;
+  }
+  .tpv-index-main-title{
+    font-size:clamp(25px,7vw,29px)!important;
+    line-height:1.04!important;
+    margin:3px 0 3px!important;
+  }
+  .tpv-index-subtitle{font-size:11px!important;line-height:1.35!important;}
+  .tpv-index-logout{
+    width:auto!important;
+    min-height:36px!important;
+    padding:6px 11px!important;
+    margin-left:auto;
+    font-size:12px!important;
+    border-radius:8px!important;
+    align-self:flex-end;
+  }
+  .tpv-index-v2 .agency-profile-card{
+    padding:16px!important;
+    margin-bottom:13px;
+    border-radius:14px;
+  }
+  .tpv-index-v2 .agency-profile-summary{gap:12px;}
+  .tpv-index-v2 .agency-profile-identity{gap:12px;align-items:center;}
+  .tpv-index-v2 .agency-profile-logo-wrap{
+    width:53px;height:53px;flex-basis:53px;
+    border-radius:11px;
+  }
+  .tpv-index-v2 .agency-profile-summary h2{
+    font-size:22px;
+    margin:0;
+    line-height:1.12;
+  }
+  .tpv-index-v2 .agency-profile-caption{
+    font-size:12px;
+    line-height:1.4;
+    overflow-wrap:anywhere;
+  }
+  .tpv-index-v2 .agency-profile-edit{
+    min-height:41px;
+    padding:8px 12px;
+    border-radius:9px;
+  }
+  .tpv-index-templates{padding:15px!important;margin-bottom:13px!important;}
+  .tpv-index-templates-title{font-size:15px!important;margin-bottom:12px!important;}
+  .tpv-index-availability-strip{padding:15px!important;margin-bottom:13px!important;}
+  .tpv-index-availability-strip p{line-height:1.46;}
+  .tpv-index-availability-cta{min-height:43px!important;}
+}
