@@ -287,9 +287,11 @@ export function AgencyProfile({ session, agencyName, onProfileChange }: Props) {
         <button
           type="button"
           className="agency-profile-edit"
+          aria-label={editing ? "Cerrar edición de mi agencia" : "Editar datos de mi agencia"}
+          aria-expanded={editing}
           onClick={() => setEditing((current) => !current)}
         >
-          {editing ? "Cerrar" : "Editar mi agencia"}
+          {editing ? "Cerrar" : "Editar"}
         </button>
       </div>
 
