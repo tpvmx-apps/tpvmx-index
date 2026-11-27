@@ -1089,16 +1089,15 @@ function App() {
                   ? `${descripcion.slice(0, 180).trim()}…`
                   : descripcion;
 
-              const lineasFecha = fechas
+              // La salida inmediata ya se muestra en disponibilidad;
+              // otras fechas van plegadas para no duplicar contenido.
+              const lineasFecha = Array.from(new Set(fechas
                 .split(/\r?\n/)
                 .map((linea) => linea.trim())
-                .filter(Boolean);
-              const tieneMuchasFechas = lineasFecha.length > 3;
-              const fechasVisibles =
-                tieneMuchasFechas && !fechasAbiertas[cardKey]
-                  ? lineasFecha.slice(0, 3)
-                  : lineasFecha;
-              const fechasRestantes = Math.max(0, lineasFecha.length - 3);
+                .filter(Boolean)));
+              const esExperienciaPermanente = esTourRecurrente(tour);
+              const otrasFechas = esExperienciaPermanente ? [] : lineasFecha.slice(1);
+              const fechasId = `fechas-tour-${cardKey}-${i}`;
 
               return (
                 <div
@@ -1151,31 +1150,6 @@ function App() {
                     </p>
                   ) : null}
 
-                  <div className="tpv-index-dates" style={styles.block}>
-                    <p style={styles.label}>Próximas fechas</p>
-                    <p style={styles.valuePre}>
-                      {fechasVisibles.length > 0
-                        ? fechasVisibles.join("\n")
-                        : "Por definir"}
-                    </p>
-                    {tieneMuchasFechas ? (
-                      <button
-                        type="button"
-                        style={styles.inlineToggle}
-                        onClick={() =>
-                          setFechasAbiertas((current) => ({
-                            ...current,
-                            [cardKey]: !current[cardKey],
-                          }))
-                        }
-                      >
-                        {fechasAbiertas[cardKey]
-                          ? "Ver menos fechas"
-                          : `+ ${fechasRestantes} fechas más`}
-                      </button>
-                    ) : null}
-                  </div>
-
                   {proximaDisponibilidad && disponibilidadVista ? (
                     <div
                       className="tpv-index-next-availability"
@@ -1185,34 +1159,68 @@ function App() {
                         borderColor: disponibilidadVista.border,
                       }}
                     >
-                      <div>
+                      <div className="tpv-index-next-info">
                         <span style={styles.nextAvailabilityLabel}>
-                          Próxima salida
+                          <IndexIcon name="calendar" size={16} /> Próxima salida
                         </span>
-                        <strong
-                          style={{
-                            ...styles.nextAvailabilityValue,
-                            color: disponibilidadVista.color,
-                          }}
-                        >
-                          <span className="tpv-index-status-dot" aria-hidden="true" style={{backgroundColor:disponibilidadVista.color}} />{" "}
-                          {disponibilidadTexto(proximaDisponibilidad)}
+                        <strong className="tpv-index-next-date" style={styles.nextAvailabilityDate}>
+                          {formatAvailabilityDate(proximaDisponibilidad.date)}
                         </strong>
                       </div>
-                      <span style={styles.nextAvailabilityDate}>
-                        {formatAvailabilityDate(proximaDisponibilidad.date)}
-                      </span>
+                      <strong
+                        className="tpv-index-seat-status"
+                        style={{
+                          ...styles.nextAvailabilityValue,
+                          color: disponibilidadVista.color,
+                        }}
+                      >
+                        <span className="tpv-index-status-dot" aria-hidden="true" style={{backgroundColor:disponibilidadVista.color}} />{" "}
+                        {disponibilidadTexto(proximaDisponibilidad)}
+                      </strong>
+                    </div>
+                  ) : null}
+
+                  {(esExperienciaPermanente || otrasFechas.length > 0) ? (
+                    <div className="tpv-index-dates tpv-index-dates-compact" style={styles.block}>
+                      {esExperienciaPermanente ? (
+                        <p className="tpv-index-recurring-label">
+                          <IndexIcon name="calendar" size={16} />
+                          {lineasFecha.join(" · ") || "Disponible todo el año"}
+                        </p>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="tpv-index-other-dates-toggle"
+                            aria-expanded={Boolean(fechasAbiertas[cardKey])}
+                            aria-controls={fechasId}
+                            onClick={() =>
+                              setFechasAbiertas((current) => ({
+                                ...current,
+                                [cardKey]: !current[cardKey],
+                              }))
+                            }
+                          >
+                            <IndexIcon name="calendar" size={16}/>
+                            {fechasAbiertas[cardKey]
+                              ? "Ocultar otras fechas"
+                              : `Ver ${otrasFechas.length} ${otrasFechas.length === 1 ? "fecha más" : "fechas más"}`}
+                          </button>
+                          <ul id={fechasId} className="tpv-index-other-dates" hidden={!fechasAbiertas[cardKey]}>
+                            {otrasFechas.map((fecha) => <li key={fecha}>{fecha}</li>)}
+                          </ul>
+                        </>
+                      )}
                     </div>
                   ) : null}
 
                   <div className="tpv-index-prices" style={styles.priceRow}>
-                    <div style={styles.priceBox}>
-                      <span style={styles.priceLabel}>Precio</span>
+                    <div className="tpv-index-price-main" style={styles.priceBox}>
+                      <span style={styles.priceLabel}>Precio por persona</span>
                       <span style={styles.priceValue}>{precio}</span>
                     </div>
-
-                    <div style={styles.priceBox}>
-                      <span style={styles.priceLabel}>Reserva</span>
+                    <div className="tpv-index-price-deposit" style={styles.priceBox}>
+                      <span style={styles.priceLabel}>Aparta con</span>
                       <span style={styles.priceValue}>{reserva}</span>
                     </div>
                   </div>
