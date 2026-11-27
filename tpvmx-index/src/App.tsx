@@ -92,6 +92,7 @@ function formatAvailabilityDate(value: string) {
     weekday: "short",
     day: "2-digit",
     month: "short",
+    year: "numeric",
   }).format(new Date(timestamp));
 
   return formatted
@@ -150,16 +151,50 @@ function disponibilidadTexto(item: AvailabilityItem) {
   return item.status || "Consultar disponibilidad";
 }
 
-function esSinFecha(valor: string) {
-  const t = String(valor || "").toLowerCase().trim();
-  return (
-    !t ||
-    t.includes("definir") ||
-    t.includes("pendiente") ||
-    t.includes("pendientes") ||
-    t.includes("proximamente") ||
-    t.includes("próximamente")
+// Coincidir con el criterio del catálogo público: CONTROL describe el
+// producto; las fechas vigentes de los tours programados vienen de Supabase.
+function fechaIndicadaEnControl(tour: Tour): string {
+  return getField(tour, [
+    "FECHA BOT", "FECHA 1", "FECHA 0", "PRÓXIMAS_FECHAS", "PROXIMAS_FECHAS",
+  ]);
+}
+
+function claveOperativaDelTour(tour: Tour): string {
+  return normalizarClave(
+    getField(tour, ["CLAVE FIJA", "CLAVE_FIJA"]) || getField(tour, ["CLAVE"])
   );
+}
+
+function esTourRecurrente(tour: Tour): boolean {
+  const agenda = normalizarTexto(getField(tour, ["AGENDA"]));
+  const fechas = normalizarTexto(fechaIndicadaEnControl(tour));
+  return agenda.includes("todo el ano") || fechas.includes("salidas diarias");
+}
+
+function esTourDiarioCdmx(tour: Tour): boolean {
+  if (!esTourRecurrente(tour)) return false;
+  const estado = normalizarTexto(getField(tour, ["ESTADO"]));
+  return estado === "cdmx" || estado.includes("ciudad de mexico");
+}
+
+function tieneAnuncioSinFecha(tour: Tour): boolean {
+  // Nunca publicar como disponible un producto todavía anunciado como
+  // Próximamente / pendiente / por definir en su ficha comercial.
+  const texto = normalizarTexto(
+    [fechaIndicadaEnControl(tour), getField(tour, ["AGENDA"])].join(" ")
+  );
+  return ["proximamente", "pendiente", "por definir", "agotado"]
+    .some((marca) => texto.includes(marca));
+}
+
+function inicioDiaMexicoUtc(): number {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Mexico_City",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const numero = (tipo: "year" | "month" | "day") =>
+    Number(partes.find((p) => p.type === tipo)?.value || 0);
+  return Date.UTC(numero("year"), numero("month") - 1, numero("day"));
 }
 
 async function copiarTexto(texto: string, etiqueta: string): Promise<{ ok: boolean; message: string }> {
@@ -622,11 +657,6 @@ function App() {
     void cargarTours();
   }, [accessStatus, session]);
 
-  const estados = useMemo(() => {
-    return Array.from(
-      new Set(tours.map((tour) => getField(tour, ["ESTADO"])).filter(Boolean))
-    ).sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-  }, [tours]);
    const plantillasActivas = useMemo(() => {
   return plantillasCanva
     .filter((item) => {
@@ -653,11 +683,7 @@ function App() {
 
   const disponibilidadPorClave = useMemo(() => {
     const mapa = new Map<string, AvailabilityItem[]>();
-    const todayUtc = Date.UTC(
-      new Date().getUTCFullYear(),
-      new Date().getUTCMonth(),
-      new Date().getUTCDate()
-    );
+    const todayUtc = inicioDiaMexicoUtc();
 
     disponibilidad.forEach((row) => {
       const key = normalizarClave(String(row.CLAVE || ""));
@@ -692,56 +718,73 @@ function App() {
     return mapa;
   }, [disponibilidad]);
 
+  const toursVendibles = useMemo(() => {
+    return tours.filter((tour) => {
+      const nombre = getField(tour, ["TOUR"]);
+      const clave = getField(tour, ["CLAVE FIJA", "CLAVE_FIJA", "CLAVE"]);
+      if (!nombre || !clave || normalizarClave(clave) === "P") return false;
+      if (tieneAnuncioSinFecha(tour)) return false;
+
+      // Las experiencias permanentes (todo el año/salidas diarias)
+      // se mantienen visibles, como en el catálogo de la web.
+      if (esTourRecurrente(tour)) return true;
+
+      // Para un tour con fecha, el único indicador para exhibirlo es
+      // una salida futura vigente en index_availability (Supabase).
+      const salidas = disponibilidadPorClave.get(claveOperativaDelTour(tour)) || [];
+      return salidas.some((salida) => salida.dateMs !== null);
+    });
+  }, [tours, disponibilidadPorClave]);
+
+  const estados = useMemo(() => {
+    return Array.from(
+      new Set(toursVendibles.map((tour) => getField(tour, ["ESTADO"])).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  }, [toursVendibles]);
+
   const toursFiltrados = useMemo(() => {
-    const filtrados = tours.filter((tour) => {
-      const texto = [
-        getField(tour, ["CLAVE"]),
+    const termino = normalizarTexto(busqueda);
+    const filtrados = toursVendibles.filter((tour) => {
+      const fechasVigentes = (disponibilidadPorClave.get(claveOperativaDelTour(tour)) || [])
+        .map((salida) => salida.date).join(" ");
+      const texto = normalizarTexto([
+        getField(tour, ["CLAVE", "CLAVE FIJA"]),
         getField(tour, ["TOUR"]),
         getField(tour, ["ESTADO"]),
-        getField(tour, [
-          "Fecha Bot",
-          "FECHA BOT",
-          "FECHA_BOT",
-          "PRÓXIMAS_FECHAS",
-        ]),
+        fechaIndicadaEnControl(tour),
+        fechasVigentes,
         getField(tour, ["NIVEL DE DIFICULTAD", "DIFICULTAD", "NIVEL", "AB"]),
-      ]
-        .join(" ")
-        .toLowerCase();
+      ].join(" "));
 
-      const coincideBusqueda = texto.includes(busqueda.toLowerCase());
-      const estadoTour = getField(tour, ["ESTADO"]);
-      const coincideEstado = estado === "" || estadoTour === estado;
-
+      const coincideBusqueda = !termino || texto.includes(termino);
+      const coincideEstado = !estado || getField(tour, ["ESTADO"]) === estado;
       return coincideBusqueda && coincideEstado;
     });
 
     return filtrados.sort((a, b) => {
-      const fechaA = getField(a, [
-        "Fecha Bot",
-        "FECHA BOT",
-        "FECHA_BOT",
-        "PRÓXIMAS_FECHAS",
-      ]);
-      const fechaB = getField(b, [
-        "Fecha Bot",
-        "FECHA BOT",
-        "FECHA_BOT",
-        "PRÓXIMAS_FECHAS",
-      ]);
+      // 1) Próximas salidas con fecha, en orden cronológico.
+      // 2) Otros productos permanentes.
+      // 3) Experiencias diarias de CDMX, siempre al final.
+      const grupo = (tour: Tour) =>
+        esTourDiarioCdmx(tour) ? 2 : esTourRecurrente(tour) ? 1 : 0;
+      const grupoA = grupo(a);
+      const grupoB = grupo(b);
+      if (grupoA !== grupoB) return grupoA - grupoB;
 
-      const sinFechaA = esSinFecha(fechaA);
-      const sinFechaB = esSinFecha(fechaB);
+      if (grupoA === 0) {
+        const ms = (tour: Tour) =>
+          disponibilidadPorClave.get(claveOperativaDelTour(tour))?.[0]?.dateMs
+          ?? Number.POSITIVE_INFINITY;
+        const fechaA = ms(a);
+        const fechaB = ms(b);
+        if (fechaA !== fechaB) return fechaA - fechaB;
+      }
 
-      if (sinFechaA && !sinFechaB) return 1;
-      if (!sinFechaA && sinFechaB) return -1;
-
-      const tourA = getField(a, ["TOUR"]);
-      const tourB = getField(b, ["TOUR"]);
-
-      return tourA.localeCompare(tourB, "es", { sensitivity: "base" });
+      return getField(a, ["TOUR"]).localeCompare(
+        getField(b, ["TOUR"]), "es", { sensitivity: "base" }
+      );
     });
-  }, [tours, busqueda, estado]);
+  }, [toursVendibles, disponibilidadPorClave, busqueda, estado]);
 
   if (!session) {
     return <LoginScreen />;
@@ -837,10 +880,10 @@ function App() {
               />
 
               <div>
-                <p className="tpv-index-eyebrow" style={styles.brand}>TU PRÓXIMO VIAJE MX / HERRAMIENTAS PARA AGENCIAS</p>
+                <p className="tpv-index-eyebrow" style={styles.brand}>Tu Próximo Viaje MX · Herramientas para agencias</p>
                 <h1 className="tpv-index-main-title" style={styles.title}>INDEX</h1>
                 <p className="tpv-index-subtitle" style={styles.subtitle}>
-                  {agencyProfile?.commercialName || agencyName ? `${agencyProfile?.commercialName || agencyName} · ` : ""}Área comercial.
+                  Tu espacio de ventas.
                 </p>
               </div>
             </div>
@@ -867,7 +910,7 @@ function App() {
         <section className="tpv-index-workspace" aria-label="Herramientas rápidas">
   {plantillasActivas.length > 0 && (
   <div className="tpv-index-templates" style={styles.canvaSection}>
-    <p className="tpv-index-templates-title" style={styles.canvaTitle}><IndexIcon name="briefcase" size={19}/> Materiales de venta</p>
+    <p className="tpv-index-templates-title" style={styles.canvaTitle}><IndexIcon name="gallery" size={19}/> Materiales para compartir</p>
 
     <div style={styles.canvaButtons}>
       {plantillasActivas.map((item, i) => (
@@ -888,7 +931,7 @@ function App() {
 
         <div className="tpv-index-availability-strip" style={styles.availabilityStrip}>
           <div>
-            <p className="tpv-index-availability-eyebrow" style={styles.availabilityStripEyebrow}>CUPO Y QUÓRUM</p>
+            <p className="tpv-index-availability-eyebrow" style={styles.availabilityStripEyebrow}>Cupos y salidas</p>
             <p style={styles.availabilityStripText}>
               Consulta los espacios y el quórum reportados para las próximas salidas.
             </p>
@@ -905,10 +948,18 @@ function App() {
         </section>
 
         <div className="tpv-index-catalog-intro">
-          <div>
-            <p className="tpv-index-section-kicker">CATÁLOGO / INDEX</p>
-            <h2>Experiencias disponibles.</h2>
-            <p>Fechas, precios y recursos para tu venta.</p>
+          <div className="tpv-index-welcome-copy">
+            <p className="tpv-index-section-kicker">
+              <IndexIcon name="compass" size={18} />
+              Ideas para tus viajeros
+            </p>
+            <h2>
+              ¡Qué gusto verte{agencyProfile?.commercialName ? `, ${agencyProfile.commercialName}` : ""}!
+            </h2>
+            <p>Encuentra experiencias, fechas y materiales para inspirar a tus clientes.</p>
+          </div>
+          <div className="tpv-index-welcome-mark" aria-hidden="true">
+            <IndexIcon name="compass" size={36} />
           </div>
         </div>
         <div className="tpv-index-filters" style={styles.filtersBox}>
@@ -939,7 +990,11 @@ function App() {
 
 <div className="tpv-index-results" style={styles.metaRow} role="status" aria-live="polite">
           <span style={styles.metaBadge}>
-            {toursFiltrados.length} experiencias encontradas
+            {loading
+              ? "Preparando el catálogo…"
+              : error
+                ? "No pudimos actualizar el catálogo"
+                : `${toursFiltrados.length} ${toursFiltrados.length === 1 ? "experiencia encontrada" : "experiencias encontradas"}`}
           </span>
           {(busqueda || estado) ? (
             <button
@@ -955,7 +1010,7 @@ function App() {
           ) : null}
         </div>
 
-        {loading && <div style={styles.infoBox}>Cargando tours...</div>}
+        {loading && <div className="tpv-index-loading" style={styles.infoBox}>Preparando las experiencias para ti…</div>}
         {!loading && error && <div style={styles.errorBox}>{error}</div>}
 
         {!loading && !error && toursFiltrados.length === 0 && (
@@ -987,14 +1042,12 @@ function App() {
                   "AB",
                 ]) || "";
 
-              const fechas =
-                getField(tour, [
-                  "Fecha Bot",
-                  "FECHA BOT",
-                  "FECHA_BOT",
-                  "PRÓXIMAS_FECHAS",
-                  "PROXIMAS_FECHAS",
-                ]) || "Por definir";
+              const fechas = esTourRecurrente(tour)
+                ? fechaIndicadaEnControl(tour) || "Disponible todo el año"
+                : (disponibilidadPorClave.get(claveOperativaDelTour(tour)) || [])
+                    .filter((salida) => salida.dateMs !== null)
+                    .map((salida) => formatAvailabilityDate(salida.date))
+                    .join("\n");
 
               const precio = formatearMoneda(getField(tour, ["PRECIO", "O"]));
               const reserva = formatearMoneda(getField(tour, ["RESERVA", "P"]));
@@ -1036,16 +1089,15 @@ function App() {
                   ? `${descripcion.slice(0, 180).trim()}…`
                   : descripcion;
 
-              const lineasFecha = fechas
+              // La salida inmediata ya se muestra en disponibilidad;
+              // otras fechas van plegadas para no duplicar contenido.
+              const lineasFecha = Array.from(new Set(fechas
                 .split(/\r?\n/)
                 .map((linea) => linea.trim())
-                .filter(Boolean);
-              const tieneMuchasFechas = lineasFecha.length > 3;
-              const fechasVisibles =
-                tieneMuchasFechas && !fechasAbiertas[cardKey]
-                  ? lineasFecha.slice(0, 3)
-                  : lineasFecha;
-              const fechasRestantes = Math.max(0, lineasFecha.length - 3);
+                .filter(Boolean)));
+              const esExperienciaPermanente = esTourRecurrente(tour);
+              const otrasFechas = esExperienciaPermanente ? [] : lineasFecha.slice(1);
+              const fechasId = `fechas-tour-${cardKey}-${i}`;
 
               return (
                 <div
@@ -1098,31 +1150,6 @@ function App() {
                     </p>
                   ) : null}
 
-                  <div className="tpv-index-dates" style={styles.block}>
-                    <p style={styles.label}>Próximas fechas</p>
-                    <p style={styles.valuePre}>
-                      {fechasVisibles.length > 0
-                        ? fechasVisibles.join("\n")
-                        : "Por definir"}
-                    </p>
-                    {tieneMuchasFechas ? (
-                      <button
-                        type="button"
-                        style={styles.inlineToggle}
-                        onClick={() =>
-                          setFechasAbiertas((current) => ({
-                            ...current,
-                            [cardKey]: !current[cardKey],
-                          }))
-                        }
-                      >
-                        {fechasAbiertas[cardKey]
-                          ? "Ver menos fechas"
-                          : `+ ${fechasRestantes} fechas más`}
-                      </button>
-                    ) : null}
-                  </div>
-
                   {proximaDisponibilidad && disponibilidadVista ? (
                     <div
                       className="tpv-index-next-availability"
@@ -1132,34 +1159,68 @@ function App() {
                         borderColor: disponibilidadVista.border,
                       }}
                     >
-                      <div>
+                      <div className="tpv-index-next-info">
                         <span style={styles.nextAvailabilityLabel}>
-                          Próxima salida
+                          <IndexIcon name="calendar" size={16} /> Próxima salida
                         </span>
-                        <strong
-                          style={{
-                            ...styles.nextAvailabilityValue,
-                            color: disponibilidadVista.color,
-                          }}
-                        >
-                          <span className="tpv-index-status-dot" aria-hidden="true" style={{backgroundColor:disponibilidadVista.color}} />{" "}
-                          {disponibilidadTexto(proximaDisponibilidad)}
+                        <strong className="tpv-index-next-date" style={styles.nextAvailabilityDate}>
+                          {formatAvailabilityDate(proximaDisponibilidad.date)}
                         </strong>
                       </div>
-                      <span style={styles.nextAvailabilityDate}>
-                        {formatAvailabilityDate(proximaDisponibilidad.date)}
-                      </span>
+                      <strong
+                        className="tpv-index-seat-status"
+                        style={{
+                          ...styles.nextAvailabilityValue,
+                          color: disponibilidadVista.color,
+                        }}
+                      >
+                        <span className="tpv-index-status-dot" aria-hidden="true" style={{backgroundColor:disponibilidadVista.color}} />{" "}
+                        {disponibilidadTexto(proximaDisponibilidad)}
+                      </strong>
+                    </div>
+                  ) : null}
+
+                  {(esExperienciaPermanente || otrasFechas.length > 0) ? (
+                    <div className="tpv-index-dates tpv-index-dates-compact" style={styles.block}>
+                      {esExperienciaPermanente ? (
+                        <p className="tpv-index-recurring-label">
+                          <IndexIcon name="calendar" size={16} />
+                          {lineasFecha.join(" · ") || "Disponible todo el año"}
+                        </p>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="tpv-index-other-dates-toggle"
+                            aria-expanded={Boolean(fechasAbiertas[cardKey])}
+                            aria-controls={fechasId}
+                            onClick={() =>
+                              setFechasAbiertas((current) => ({
+                                ...current,
+                                [cardKey]: !current[cardKey],
+                              }))
+                            }
+                          >
+                            <IndexIcon name="calendar" size={16}/>
+                            {fechasAbiertas[cardKey]
+                              ? "Ocultar otras fechas"
+                              : `Ver ${otrasFechas.length} ${otrasFechas.length === 1 ? "fecha más" : "fechas más"}`}
+                          </button>
+                          <ul id={fechasId} className="tpv-index-other-dates" hidden={!fechasAbiertas[cardKey]}>
+                            {otrasFechas.map((fecha) => <li key={fecha}>{fecha}</li>)}
+                          </ul>
+                        </>
+                      )}
                     </div>
                   ) : null}
 
                   <div className="tpv-index-prices" style={styles.priceRow}>
-                    <div style={styles.priceBox}>
-                      <span style={styles.priceLabel}>Precio</span>
+                    <div className="tpv-index-price-main" style={styles.priceBox}>
+                      <span style={styles.priceLabel}>Precio por persona</span>
                       <span style={styles.priceValue}>{precio}</span>
                     </div>
-
-                    <div style={styles.priceBox}>
-                      <span style={styles.priceLabel}>Reserva</span>
+                    <div className="tpv-index-price-deposit" style={styles.priceBox}>
+                      <span style={styles.priceLabel}>Aparta con</span>
                       <span style={styles.priceValue}>{reserva}</span>
                     </div>
                   </div>

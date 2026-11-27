@@ -1,0 +1,514 @@
+/* INDEX TPVMX V3.2 · Calidez editorial
+   Reutiliza la estructura y funcionalidades probadas de V3.1.
+   Capa de presentación aparte para que sea reversible sin migraciones.
+   Paleta corporativa web TPVMX: turquesa #22b8b6, azul #2d9cdb,
+   rosa #e63b8d y azul profundo #163e55.
+*/
+.tpv-index-v2 {
+  --idx-ink:#163e55;
+  --idx-muted:#637c89;
+  --idx-teal:#116b83;
+  --idx-rose:#e63b8d;
+  --idx-border:#dae8ed;
+  --idx-paper:#fbfdff;
+  --idx-font:"Inter",Arial,sans-serif;
+  --idx-heading:"Barlow","Inter",Arial,sans-serif;
+  --idx-accent:#22b8b6;
+  --idx-blue:#2d9cdb;
+  background:var(--idx-paper)!important;
+  color:var(--idx-ink)!important;
+  font-family:var(--idx-font);
+}
+.tpv-index-v2 :is(h1,h2,h3) {
+  font-family:var(--idx-heading)!important;
+  font-weight:700!important;
+  letter-spacing:-.021em!important;
+}
+.tpv-index-v2 :is(input,select,button) {
+  font-family:var(--idx-font)!important;
+}
+.tpv-index-v2 :is(button,a,input,select):focus-visible {
+  outline:3px solid #2d9cdb!important;
+  outline-offset:3px!important;
+}
+.tpv-index-container {max-width:1320px!important;}
+.tpv-index-page {padding-bottom:42px!important;}
+
+/* Barra con personalidad, sin convertirla en una portada monumental. */
+.tpv-index-topbar {
+  padding-top:20px!important;
+  padding-bottom:16px!important;
+  margin-bottom:15px!important;
+  background:transparent!important;
+  border-bottom:1px solid #dce8ef!important;
+}
+.tpv-index-topbar:after {
+  background:linear-gradient(90deg,#22b8b6 0%,#2d9cdb 54%,#e63b8d 100%)!important;
+  width:148px!important;
+  height:4px!important;
+  border-radius:3px;
+}
+.tpv-index-logo {
+  width:58px!important;
+  height:58px!important;
+  border-radius:7px!important;
+}
+.tpv-index-eyebrow {
+  color:#287d96!important;
+  font:650 11px/1.4 var(--idx-font)!important;
+  letter-spacing:.015em!important;
+  text-transform:none!important;
+}
+.tpv-index-main-title {
+  color:#163e55!important;
+  font:700 36px/1.02 var(--idx-heading)!important;
+  letter-spacing:-.025em!important;
+}
+.tpv-index-subtitle {
+  color:#647b89!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+}
+.tpv-index-logout {
+  padding:8px 12px!important;
+  min-height:40px!important;
+  border:1px solid #cbdee8!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  color:#245572!important;
+  font:650 12px/1.2 var(--idx-font)!important;
+}
+.tpv-index-logout:hover {
+  background:#f1faff!important;
+  border-color:#6eb3cf!important;
+}
+
+/* Mi agencia, cercano y no dominante. Datos de marca blanca intactos. */
+.tpv-index-page .agency-profile-card {
+  background:#fff!important;
+  border:1px solid #dfebf0!important;
+  border-radius:12px!important;
+  padding:14px 17px!important;
+  margin:0 0 16px!important;
+  box-shadow:0 3px 15px rgba(22,62,85,.035)!important;
+}
+.tpv-index-page .agency-profile-card:before {
+  display:block!important;
+  width:4px!important;
+  background:linear-gradient(180deg,#22b8b6,#2d9cdb 62%,#e63b8d)!important;
+}
+.tpv-index-page .agency-profile-logo-wrap {
+  border:1px solid #dce9ef!important;
+  border-radius:9px!important;
+  background:#fff!important;
+  width:50px!important;
+  height:50px!important;
+  flex-basis:50px!important;
+}
+.tpv-index-page .agency-profile-eyebrow {
+  color:#2683a0!important;
+  font:650 11px/1.3 var(--idx-font)!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+.tpv-index-page .agency-profile-summary h2 {
+  font:700 clamp(20px,2.2vw,26px)/1.15 var(--idx-heading)!important;
+  letter-spacing:-.01em!important;
+}
+.tpv-index-page .agency-profile-caption {
+  color:#607886!important;
+  font-size:12px!important;
+  line-height:1.5!important;
+}
+.tpv-index-page .agency-profile-edit {
+  background:#f4faff!important;
+  border:1px solid #c7dfed!important;
+  border-radius:8px!important;
+  color:#166c8c!important;
+  padding:9px 15px!important;
+  font:650 12px/1.2 var(--idx-font)!important;
+}
+.tpv-index-page .agency-profile-edit:hover {
+  background:#e3f4fc!important;
+  color:#163e55!important;
+}
+
+/* Una banda comercial que invita a actuar, no a llenar un formulario fiscal. */
+.tpv-index-workspace {
+  gap:13px!important;
+  padding:0 0 8px!important;
+  border-bottom:0!important;
+}
+.tpv-index-templates,
+.tpv-index-availability-strip {
+  background:#f0fbfc!important;
+  border:1px solid #cdeaf1!important;
+  border-radius:12px!important;
+  padding:16px 19px!important;
+  box-shadow:none!important;
+  min-height:126px;
+}
+.tpv-index-availability-strip {
+  background:#f2f8ff!important;
+  border-color:#d9e8f8!important;
+}
+.tpv-index-templates-title,
+.tpv-index-availability-eyebrow {
+  color:#204d67!important;
+  font:700 14px/1.3 var(--idx-heading)!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+.tpv-index-templates-title svg,
+.tpv-index-availability-cta svg {color:#258faf!important;}
+.tpv-index-template-link,
+.tpv-index-availability-cta {
+  min-height:35px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  padding:6px 0!important;
+  color:#126987!important;
+  background:transparent!important;
+  border:0!important;
+  border-bottom:1px solid #74b9ce!important;
+  border-radius:0!important;
+  font:650 13px/1.25 var(--idx-font)!important;
+  text-decoration:none!important;
+}
+.tpv-index-availability-strip p:not(.tpv-index-availability-eyebrow) {
+  font-size:12px!important;
+  color:#617c89!important;
+  line-height:1.45!important;
+}
+.tpv-index-template-link:hover,
+.tpv-index-availability-cta:hover {
+  color:#163e55!important;
+  border-color:#2d9cdb!important;
+}
+
+/* Bienvenida humana, sin promesas inventadas ni datos de ventas. */
+.tpv-index-catalog-intro {
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:18px;
+  margin:15px 0 17px!important;
+  padding:20px 24px!important;
+  border:1px solid #d9eaf1;
+  border-left:4px solid #2d9cdb;
+  border-radius:12px;
+  background:linear-gradient(112deg,#f0fafd,#ffffff 74%)!important;
+}
+.tpv-index-welcome-copy {min-width:0;flex:1;}
+.tpv-index-section-kicker {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 7px!important;
+  color:#1a7d9b!important;
+  font:650 12px/1.4 var(--idx-font)!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+.tpv-index-section-kicker svg {color:#22a8b8;flex-shrink:0;}
+.tpv-index-catalog-intro h2 {
+  margin:0 0 7px!important;
+  color:#163e55!important;
+  font:700 clamp(26px,3.2vw,38px)/1.1 var(--idx-heading)!important;
+  letter-spacing:-.02em!important;
+  overflow-wrap:break-word;
+  text-wrap:balance;
+}
+.tpv-index-catalog-intro p:last-child {
+  color:#587886!important;
+  font:400 13px/1.55 var(--idx-font)!important;
+  max-width:680px;
+}
+.tpv-index-welcome-mark {
+  flex:0 0 69px;
+  display:grid;
+  place-items:center;
+  width:69px;height:69px;
+  color:#1c8daa;
+  border:1px solid #cbe8f1;
+  border-radius:50%;
+  background:#fff;
+}
+
+/* Búsqueda, resultados y microestados legibles. */
+.tpv-index-filters {
+  grid-template-columns:minmax(0,2fr) minmax(0,1fr)!important;
+  padding:5px 0 7px!important;
+  gap:11px!important;
+}
+.tpv-index-filters input,
+.tpv-index-filters select {
+  border:1px solid #cbdde6!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  min-height:47px!important;
+  color:#234b60!important;
+  font:450 13px/1.35 var(--idx-font)!important;
+}
+.tpv-index-filters :is(input,select):focus {
+  border-color:#2d9cdb!important;
+}
+.tpv-index-results {
+  margin:2px 0 12px!important;
+}
+.tpv-index-results span {
+  color:#62808f!important;
+  font:600 12px/1.35 var(--idx-font)!important;
+}
+.tpv-index-clear-filters {
+  min-height:36px;
+  color:#216e9d!important;
+  font:650 12px/1.3 var(--idx-font)!important;
+  border-bottom-color:#8dc5db!important;
+}
+.tpv-index-loading {
+  padding:20px!important;
+  border:1px solid #d7e9f0!important;
+  border-radius:10px!important;
+  background:#f6fbfe!important;
+  color:#627d88!important;
+}
+
+/* Fichas de experiencias: pequeñas tarjetas cálidas, NO estilo dashboard genérico. */
+.tpv-index-cards {
+  gap:16px!important;
+  align-items:stretch!important;
+  border-top:0!important;
+}
+.tpv-index-tour-card {
+  padding:17px!important;
+  background:#fff!important;
+  border:1px solid #dbe7ed!important;
+  border-radius:12px!important;
+  box-shadow:0 4px 17px rgba(22,62,85,.04)!important;
+}
+.tpv-index-tour-card:hover {
+  border-color:#b2dbe8!important;
+  box-shadow:0 8px 22px rgba(22,62,85,.065)!important;
+}
+.tpv-index-tour-card.has-photo {
+  grid-template-columns:160px minmax(0,1fr)!important;
+  column-gap:16px!important;
+}
+.tpv-index-tour-cover {
+  width:160px;
+  height:142px;
+  border-radius:8px!important;
+  background:#e8f7fb;
+}
+.tpv-index-tour-cover img {
+  border-radius:8px;
+  object-fit:cover;
+}
+.tpv-index-card-top {gap:6px 9px!important;}
+.tpv-index-card-top span {
+  color:#267aa0!important;
+  font:650 11px/1.25 var(--idx-font)!important;
+  letter-spacing:0!important;
+}
+.tpv-index-card-top span:first-child {
+  background:#ecf8fc!important;
+  padding:4px 7px!important;
+  border-radius:6px!important;
+  color:#147d99!important;
+}
+.tpv-index-card-top span+span {
+  color:#607781!important;
+  font-weight:500!important;
+}
+.tpv-index-tour-title {
+  color:#163e55!important;
+  font:700 clamp(21px,2.25vw,27px)/1.15 var(--idx-heading)!important;
+  letter-spacing:-.01em!important;
+}
+.tpv-index-description p {
+  font:400 12px/1.55 var(--idx-font)!important;
+  color:#5a7280!important;
+}
+.tpv-index-difficulty {
+  color:#866d36!important;
+  font:600 11px/1.4 var(--idx-font)!important;
+}
+.tpv-index-dates {
+  border-top:1px solid #e7edf1!important;
+  padding-top:11px!important;
+}
+.tpv-index-dates>p:first-child {
+  color:#45758e!important;
+  font:650 11px/1.3 var(--idx-font)!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+.tpv-index-dates>p:nth-child(2) {
+  color:#365970!important;
+  font:500 13px/1.5 var(--idx-font)!important;
+}
+.tpv-index-next-availability {border-bottom:1px solid #e6edf1!important;}
+.tpv-index-prices {
+  gap:11px!important;
+  margin:15px 0!important;
+}
+.tpv-index-prices>div {
+  padding:11px 12px!important;
+  background:#f5fafd!important;
+  border:0!important;
+  border-radius:8px!important;
+  min-width:0;
+}
+.tpv-index-prices span:first-child {
+  color:#55768a!important;
+  font:600 11px/1.4 var(--idx-font)!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+}
+.tpv-index-prices span:last-child {
+  color:#163e55!important;
+  font:700 clamp(18px,2vw,22px)/1.15 var(--idx-heading)!important;
+}
+.tpv-index-action {
+  min-height:45px!important;
+  border-radius:8px!important;
+  font:650 12px/1.3 var(--idx-font)!important;
+  padding:10px 13px!important;
+}
+.tpv-index-action-primary {
+  background:#166e87!important;
+  border-color:#166e87!important;
+  color:#fff!important;
+}
+.tpv-index-action-primary:hover {background:#125970!important;}
+.tpv-index-action-secondary {
+  color:#176883!important;
+  background:#f3faff!important;
+  border-color:#b8dce8!important;
+}
+.tpv-index-action-secondary:hover {background:#e5f5fc!important;}
+.tpv-index-resources {border-top:1px solid #e7eff3!important;}
+.tpv-index-resource-link {
+  color:#207d9e!important;
+  font:600 12px/1.4 var(--idx-font)!important;
+}
+.tpv-index-copy-feedback {border-radius:7px!important;font:600 12px/1.4 var(--idx-font)!important;}
+
+/* La misma amabilidad en la pantalla de cupos y galería. */
+.tpv-index-stock-page,
+.tpv-index-gallery {background:#fbfdff!important;}
+.tpv-index-stock-hero {
+  padding:19px 21px!important;
+  border:1px solid #d9e9f1!important;
+  border-radius:11px!important;
+  background:#f0fafe!important;
+}
+.tpv-index-stock-title {
+  color:#163e55!important;
+  font:700 clamp(26px,3.2vw,39px)/1.15 var(--idx-heading)!important;
+}
+.tpv-index-stock-hero p {color:#5a7887!important;}
+.tpv-index-stock-grid {border-top:0!important;gap:16px!important;}
+.tpv-index-stock-card {
+  padding:17px!important;
+  border:1px solid #dce9ef!important;
+  border-radius:11px!important;
+  background:#fff!important;
+}
+.tpv-index-stock-tour {
+  font:700 clamp(21px,2.2vw,27px)/1.15 var(--idx-heading)!important;
+}
+.tpv-index-stock-filter {border-radius:7px!important;font-weight:600!important;}
+.tpv-index-stock-filter[aria-pressed="true"] {
+  background:#166e87!important;
+  color:#fff!important;
+  border-color:#166e87!important;
+}
+.tpv-index-gallery-title {
+  font:700 clamp(28px,3.5vw,41px)/1.12 var(--idx-heading)!important;
+}
+.tpv-index-gallery-tile {border-radius:9px!important;}
+/* Acceso también debe sentirse TPVMX. */
+.tpv-index-login {background:#f4faff!important;}
+.tpv-index-login-card {
+  border:1px solid #d6e6ef!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  box-shadow:0 12px 32px rgba(22,62,85,.05)!important;
+}
+.tpv-index-login-card:before {
+  background:linear-gradient(90deg,#22b8b6,#2d9cdb 58%,#e63b8d)!important;
+}
+.tpv-index-login-title {
+  color:#163e55!important;
+  font:700 clamp(29px,5vw,39px)/1.12 var(--idx-heading)!important;
+}
+.tpv-index-login-card input {border-radius:8px!important;}
+.tpv-index-login-card button[type="submit"] {
+  border-radius:8px!important;
+  background:#166e87!important;
+  color:#fff!important;
+  font:650 14px/1.2 var(--idx-font)!important;
+}
+.tpv-index-login-footnote {font-size:12px;line-height:1.45;}
+
+/* Legibilidad de móvil: todo sigue siendo un portal rápido, no un folleto. */
+@media(max-width:730px) {
+  .tpv-index-workspace {grid-template-columns:1fr!important;gap:10px!important;}
+  .tpv-index-templates,.tpv-index-availability-strip {min-height:auto;}
+  .tpv-index-tour-card.has-photo {grid-template-columns:132px minmax(0,1fr)!important;}
+  .tpv-index-tour-cover {width:132px;height:123px;}
+  .tpv-index-welcome-mark {width:55px;height:55px;flex-basis:55px;}
+}
+@media(max-width:550px) {
+  .tpv-index-topbar {padding:12px 0 14px!important;}
+  .tpv-index-logo {width:45px!important;height:45px!important;}
+  .tpv-index-main-title {font-size:29px!important;}
+  .tpv-index-eyebrow {font-size:9px!important;}
+  .tpv-index-page .agency-profile-card {
+    margin:4px 0 12px!important;
+    padding:11px 13px!important;
+  }
+  .tpv-index-page .agency-profile-logo-wrap {
+    width:40px!important;height:40px!important;flex-basis:40px!important;
+  }
+  .tpv-index-page .agency-profile-summary h2 {font-size:19px!important;}
+  .tpv-index-page .agency-profile-edit {min-height:38px!important;padding:8px 10px!important;}
+  .tpv-index-workspace {gap:9px!important;padding:0!important;}
+  .tpv-index-templates,.tpv-index-availability-strip {padding:13px 15px!important;border-radius:10px!important;}
+  .tpv-index-catalog-intro {
+    margin:14px 0 14px!important;
+    padding:17px!important;
+    gap:9px!important;
+    border-radius:10px!important;
+  }
+  .tpv-index-catalog-intro h2 {
+    font-size:clamp(23px,6vw,30px)!important;
+    line-height:1.13!important;
+  }
+  .tpv-index-catalog-intro p:last-child {font-size:12px!important;}
+  .tpv-index-welcome-mark {display:none;}
+  .tpv-index-filters {grid-template-columns:minmax(0,1fr)!important;gap:8px!important;}
+  .tpv-index-tour-card {
+    padding:14px!important;
+    border-radius:10px!important;
+  }
+  .tpv-index-tour-card.has-photo {
+    grid-template-columns:112px minmax(0,1fr)!important;
+    column-gap:12px!important;
+  }
+  .tpv-index-tour-cover {width:112px;height:111px;}
+  .tpv-index-tour-title {font-size:21px!important;}
+  .tpv-index-description p {font-size:11px!important;}
+  .tpv-index-card-top span {font-size:10px!important;}
+  .tpv-index-prices span:last-child {font-size:19px!important;}
+  .tpv-index-action {font-size:11px!important;min-height:44px!important;padding:8px 10px!important;}
+  .tpv-index-stock-hero {padding:14px!important;}
+  .tpv-index-stock-card {padding:14px!important;}
+}
+@media(max-width:360px) {
+  .tpv-index-tour-card.has-photo {grid-template-columns:102px minmax(0,1fr)!important;}
+  .tpv-index-tour-cover {width:102px;height:108px;}
+  .tpv-index-actions {grid-template-columns:1fr!important;}
+}

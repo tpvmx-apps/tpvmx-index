@@ -1,0 +1,360 @@
+/* INDEX V3.3 · Fichas de experiencias TPVMX
+ * Alcance: sólo .tpv-index-tour-card y sus elementos visuales.
+ * No cambia fechas, cupos, comisiones, importes, enlaces ni textos copiados.
+ * Fotos = únicamente galería real ya integrada en INDEX.
+ */
+.tpv-index-v2 .tpv-index-cards{
+  gap:18px!important;
+  align-items:stretch!important;
+}
+.tpv-index-v2 .tpv-index-tour-card{
+  position:relative!important;
+  align-content:start!important;
+  padding:19px!important;
+  border:1px solid #d9e8ee!important;
+  border-radius:13px!important;
+  background:#fff!important;
+  box-shadow:0 5px 18px rgba(21,63,84,.05)!important;
+  transform:none!important;
+  overflow:hidden!important;
+}
+.tpv-index-v2 .tpv-index-tour-card:hover{
+  border-color:#aed7e6!important;
+  box-shadow:0 9px 25px rgba(21,63,84,.085)!important;
+  transform:none!important;
+}
+/* Una sola línea institucional: no degradados grandes ni adornos. */
+.tpv-index-v2 .tpv-index-tour-card>div:first-child[style]{
+  display:block!important;
+  position:absolute!important;
+  inset:0 0 auto 0!important;
+  width:100%!important;
+  height:4px!important;
+  border-radius:0!important;
+  background:linear-gradient(90deg,#22b8b6 0%,#2d9cdb 58%,#e63b8d 100%)!important;
+  pointer-events:none;
+}
+.tpv-index-v2 .tpv-index-tour-card.has-photo{
+  grid-template-columns:184px minmax(0,1fr)!important;
+  column-gap:19px!important;
+}
+.tpv-index-v2 .tpv-index-tour-cover{
+  grid-column:1;
+  grid-row:1 / span 3;
+  width:184px!important;
+  height:177px!important;
+  margin:2px 0 0!important;
+  background:#e8f7fb;
+  border-radius:9px!important;
+}
+.tpv-index-v2 .tpv-index-tour-cover img{
+  display:block;
+  width:100%;height:100%;
+  border-radius:9px!important;
+  object-fit:cover;object-position:center 45%;
+}
+.tpv-index-v2 .tpv-index-card-top{
+  grid-row:1;grid-column:2;
+  justify-content:flex-start!important;
+  gap:8px!important;
+  margin:2px 0 7px!important;
+}
+.tpv-index-v2 .tpv-index-tour-card:not(.has-photo) .tpv-index-card-top,
+.tpv-index-v2 .tpv-index-tour-card:not(.has-photo) .tpv-index-tour-title,
+.tpv-index-v2 .tpv-index-tour-card:not(.has-photo) .tpv-index-description{
+  grid-column:1;
+}
+.tpv-index-v2 .tpv-index-card-top span:first-child{
+  display:inline-flex!important;
+  align-items:center;
+  background:#e9f7fb!important;
+  border-radius:5px!important;
+  padding:5px 8px!important;
+  color:#117d98!important;
+  font:700 11px/1.2 var(--idx-font)!important;
+  box-shadow:none!important;
+}
+.tpv-index-v2 .tpv-index-card-top span+span{
+  padding:4px 0!important;
+  color:#67818e!important;
+  font:500 11px/1.2 var(--idx-font)!important;
+  letter-spacing:0!important;
+}
+.tpv-index-v2 .tpv-index-tour-title{
+  grid-column:2;grid-row:2;
+  margin:0 0 8px!important;
+  font:700 clamp(22px,2.3vw,29px)/1.1 var(--idx-heading)!important;
+  letter-spacing:-.024em!important;
+  color:#163e55!important;
+  text-wrap:balance;
+  overflow-wrap:anywhere;
+}
+.tpv-index-v2 .tpv-index-description{
+  grid-column:2;grid-row:3;
+  margin:0!important;
+}
+.tpv-index-v2 .tpv-index-description p{
+  font:400 12px/1.55 var(--idx-font)!important;
+  color:#526f7e!important;
+}
+.tpv-index-v2 .tpv-index-description button{
+  color:#1b809d!important;
+  font:650 12px/1.3 var(--idx-font)!important;
+  padding:3px 0!important;
+  background:transparent!important;
+}
+.tpv-index-v2 .tpv-index-difficulty{
+  grid-column:1/-1;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  margin:13px 0 11px!important;
+  color:#8b6f35!important;
+  font:550 11px/1.35 var(--idx-font)!important;
+}
+/* Fecha y cupo forman una sola información comercial, sin repetir la fecha. */
+.tpv-index-v2 .tpv-index-next-availability{
+  grid-column:1/-1;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px 19px!important;
+  padding:12px 14px!important;
+  margin:4px 0 9px!important;
+  background:#f1fafb!important;
+  border:1px solid #d9eef1!important;
+  border-radius:9px!important;
+}
+.tpv-index-v2 .tpv-index-next-info{
+  display:flex;flex-direction:column;gap:4px;
+  min-width:0;
+}
+.tpv-index-v2 .tpv-index-next-info>span{
+  display:inline-flex!important;
+  align-items:center;
+  gap:6px;
+  color:#547b88!important;
+  font:650 11px/1.25 var(--idx-font)!important;
+  letter-spacing:0!important;
+  text-transform:none!important;
+  margin:0!important;
+}
+.tpv-index-v2 .tpv-index-next-info>span svg{
+  color:#188ba2;
+  flex:0 0 auto;
+}
+.tpv-index-v2 .tpv-index-next-date{
+  color:#163e55!important;
+  font:700 14px/1.32 var(--idx-font)!important;
+  white-space:normal!important;
+}
+.tpv-index-v2 .tpv-index-seat-status{
+  display:inline-flex!important;
+  align-items:center;
+  gap:5px;
+  margin:0!important;
+  font:650 12px/1.35 var(--idx-font)!important;
+  text-align:right;
+  white-space:normal;
+}
+.tpv-index-v2 .tpv-index-seat-status .tpv-index-status-dot{
+  flex:0 0 8px;min-width:8px;
+  margin:0;
+}
+.tpv-index-v2 .tpv-index-dates-compact{
+  grid-column:1/-1;
+  margin:0 0 13px!important;
+}
+.tpv-index-v2 .tpv-index-other-dates-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:33px;
+  padding:4px 0!important;
+  border:0!important;
+  border-bottom:1px solid #8fc7d2!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:#157b98!important;
+  font:650 12px/1.25 var(--idx-font)!important;
+  cursor:pointer;
+}
+.tpv-index-v2 .tpv-index-other-dates-toggle:hover{
+  border-bottom-color:#147997!important;
+}
+.tpv-index-v2 .tpv-index-other-dates-toggle svg{flex:0 0 auto;}
+.tpv-index-v2 .tpv-index-other-dates[hidden]{display:none!important;}
+.tpv-index-v2 .tpv-index-other-dates{
+  display:grid;
+  gap:5px;
+  margin:8px 0 4px!important;
+  padding:10px 14px 10px 31px!important;
+  border-radius:7px;
+  background:#f5fafc;
+  color:#365c70;
+  font:500 12px/1.45 var(--idx-font);
+}
+.tpv-index-v2 .tpv-index-recurring-label{
+  display:inline-flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:7px;
+  margin:0!important;
+  color:#39748c;
+  font:600 12px/1.4 var(--idx-font)!important;
+}
+.tpv-index-v2 .tpv-index-recurring-label svg{color:#168ca3;flex:0 0 auto;}
+/* El precio es protagonista; el anticipo acompaña, sin dos cajones pesados. */
+.tpv-index-v2 .tpv-index-prices{
+  grid-column:1/-1;
+  display:flex!important;
+  align-items:flex-end!important;
+  flex-wrap:wrap;
+  gap:9px 18px!important;
+  margin:1px 0 15px!important;
+  padding:13px 0 0!important;
+  border-top:1px solid #e5edf0;
+}
+.tpv-index-v2 .tpv-index-prices>div{
+  display:flex!important;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:4px;
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  min-width:0;
+}
+.tpv-index-v2 .tpv-index-prices>.tpv-index-price-main{
+  flex:1 1 165px;
+}
+.tpv-index-v2 .tpv-index-prices>.tpv-index-price-deposit{
+  flex:0 1 auto;
+  padding:2px 0 2px 14px!important;
+  border-left:2px solid #a2d7e0!important;
+}
+.tpv-index-v2 .tpv-index-prices span:first-child{
+  color:#657d8a!important;
+  font:550 11px/1.3 var(--idx-font)!important;
+  text-transform:none!important;
+  letter-spacing:0!important;
+}
+.tpv-index-v2 .tpv-index-price-main span:last-child{
+  color:#163e55!important;
+  font:700 clamp(25px,2.5vw,32px)/1.09 var(--idx-heading)!important;
+}
+.tpv-index-v2 .tpv-index-price-deposit span:last-child{
+  color:#23788c!important;
+  font:700 19px/1.1 var(--idx-heading)!important;
+}
+/* Mantener en primer plano la acción que le sirve a la agencia.
+   Todas las funciones de copiar permanecen sin cambios. */
+.tpv-index-v2 .tpv-index-actions{
+  grid-column:1/-1;
+  gap:9px!important;
+  margin:0!important;
+}
+.tpv-index-v2 .tpv-index-action{
+  min-height:47px!important;
+  border-radius:8px!important;
+  padding:10px 13px!important;
+  font:650 12px/1.3 var(--idx-font)!important;
+  box-shadow:none!important;
+}
+.tpv-index-v2 .tpv-index-action-primary{
+  background:#0e8da2!important;
+  border:1px solid #0e8da2!important;
+  color:#fff!important;
+}
+.tpv-index-v2 .tpv-index-action-primary:hover{
+  background:#0b728b!important;
+  border-color:#0b728b!important;
+}
+.tpv-index-v2 .tpv-index-action-secondary{
+  background:#f1f9fd!important;
+  border:1px solid #bedeea!important;
+  color:#186d8b!important;
+}
+.tpv-index-v2 .tpv-index-action-secondary:hover{
+  background:#e3f4fb!important;
+}
+.tpv-index-v2 .tpv-index-resources{
+  grid-column:1/-1;
+  gap:9px 17px!important;
+  padding-top:12px!important;
+  margin:14px 0 0!important;
+  border-top:1px solid #e6eef1!important;
+}
+.tpv-index-v2 .tpv-index-resource-link{
+  display:inline-flex;align-items:center;gap:6px;
+  color:#167f9a!important;
+  font:600 12px/1.4 var(--idx-font)!important;
+  text-decoration:underline!important;
+  text-decoration-thickness:1px;
+  text-underline-offset:3px;
+}
+.tpv-index-v2 .tpv-index-copy-feedback{
+  grid-column:1/-1;
+  margin:10px 0 0!important;
+}
+/* Responsive: en teléfono la foto se vuelve portada de la ficha;
+   el resto mantiene botones amplios y textos sin superposición. */
+@media(max-width:1050px){
+  .tpv-index-v2 .tpv-index-tour-card.has-photo{
+    grid-template-columns:165px minmax(0,1fr)!important;
+    column-gap:15px!important;
+  }
+  .tpv-index-v2 .tpv-index-tour-cover{width:165px!important;height:166px!important;}
+}
+@media(max-width:620px){
+  .tpv-index-v2 .tpv-index-tour-card{
+    padding:15px!important;
+    border-radius:11px!important;
+  }
+  .tpv-index-v2 .tpv-index-tour-card.has-photo{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  .tpv-index-v2 .tpv-index-tour-cover{
+    grid-column:1!important;grid-row:auto!important;
+    width:100%!important;height:172px!important;
+    margin:1px 0 2px!important;
+  }
+  .tpv-index-v2 .tpv-index-card-top{
+    grid-column:1!important;grid-row:auto!important;
+    margin:10px 0 5px!important;
+  }
+  .tpv-index-v2 .tpv-index-tour-title{
+    grid-column:1!important;grid-row:auto!important;
+    font-size:24px!important;
+    margin:0 0 7px!important;
+  }
+  .tpv-index-v2 .tpv-index-description{
+    grid-column:1!important;grid-row:auto!important;
+  }
+  .tpv-index-v2 .tpv-index-description p{font-size:12px!important;}
+  .tpv-index-v2 .tpv-index-difficulty{margin:11px 0 7px!important;}
+  .tpv-index-v2 .tpv-index-next-availability{padding:11px 12px!important;}
+  .tpv-index-v2 .tpv-index-next-date{font-size:13px!important;}
+  .tpv-index-v2 .tpv-index-seat-status{font-size:11px!important;}
+  .tpv-index-v2 .tpv-index-prices{gap:10px!important;}
+  .tpv-index-v2 .tpv-index-price-main span:last-child{font-size:27px!important;}
+}
+@media(max-width:380px){
+  .tpv-index-v2 .tpv-index-tour-cover{height:152px!important;}
+  .tpv-index-v2 .tpv-index-next-availability{
+    flex-wrap:wrap;
+    align-items:flex-start!important;
+  }
+  .tpv-index-v2 .tpv-index-seat-status{text-align:left;}
+  .tpv-index-v2 .tpv-index-prices>.tpv-index-price-deposit{
+    padding-left:10px!important;
+  }
+  .tpv-index-v2 .tpv-index-actions{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .tpv-index-v2 .tpv-index-tour-card{transition:none!important;}
+}
