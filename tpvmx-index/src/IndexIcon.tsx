@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 /** Pictogramas lineales TPVMX. Exclusivamente presentación interna del INDEX. */
 export type IndexIconName =
   | "gallery" | "calendar" | "copy" | "availability" | "shield"
-  | "arrow-left" | "check" | "clock" | "briefcase" | "arrow-right";
+  | "arrow-left" | "check" | "clock" | "briefcase" | "arrow-right" | "compass";
 
 const strokes: Record<IndexIconName, ReactNode> = {
   gallery: <><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m3 17 5.5-5 4 3 3.5-4L21 17" /></>,
@@ -15,6 +15,7 @@ const strokes: Record<IndexIconName, ReactNode> = {
   check: <><path d="m5 12 5 5 9-10" /></>,
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l4 2" /></>,
   briefcase: <><rect x="3" y="7" width="18" height="14" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18m-11 0v2h4v-2" /></>,
+  compass: <><circle cx="12" cy="12" r="9" /><path d="m16 8-2.7 5.3L8 16l2.7-5.3L16 8Z" /></>,
   "arrow-right": <><path d="M4 12h16m-6-6 6 6-6 6" /></>,
 };
 
