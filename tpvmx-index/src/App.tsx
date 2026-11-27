@@ -837,10 +837,10 @@ function App() {
               />
 
               <div>
-                <p className="tpv-index-eyebrow" style={styles.brand}>TU PRÓXIMO VIAJE MX / HERRAMIENTAS PARA AGENCIAS</p>
+                <p className="tpv-index-eyebrow" style={styles.brand}>Tu Próximo Viaje MX · Herramientas para agencias</p>
                 <h1 className="tpv-index-main-title" style={styles.title}>INDEX</h1>
                 <p className="tpv-index-subtitle" style={styles.subtitle}>
-                  {agencyProfile?.commercialName || agencyName ? `${agencyProfile?.commercialName || agencyName} · ` : ""}Área comercial.
+                  Tu espacio de ventas.
                 </p>
               </div>
             </div>
@@ -867,7 +867,7 @@ function App() {
         <section className="tpv-index-workspace" aria-label="Herramientas rápidas">
   {plantillasActivas.length > 0 && (
   <div className="tpv-index-templates" style={styles.canvaSection}>
-    <p className="tpv-index-templates-title" style={styles.canvaTitle}><IndexIcon name="briefcase" size={19}/> Materiales de venta</p>
+    <p className="tpv-index-templates-title" style={styles.canvaTitle}><IndexIcon name="gallery" size={19}/> Materiales para compartir</p>
 
     <div style={styles.canvaButtons}>
       {plantillasActivas.map((item, i) => (
@@ -888,7 +888,7 @@ function App() {
 
         <div className="tpv-index-availability-strip" style={styles.availabilityStrip}>
           <div>
-            <p className="tpv-index-availability-eyebrow" style={styles.availabilityStripEyebrow}>CUPO Y QUÓRUM</p>
+            <p className="tpv-index-availability-eyebrow" style={styles.availabilityStripEyebrow}>Cupos y salidas</p>
             <p style={styles.availabilityStripText}>
               Consulta los espacios y el quórum reportados para las próximas salidas.
             </p>
@@ -905,10 +905,18 @@ function App() {
         </section>
 
         <div className="tpv-index-catalog-intro">
-          <div>
-            <p className="tpv-index-section-kicker">CATÁLOGO / INDEX</p>
-            <h2>Experiencias disponibles.</h2>
-            <p>Fechas, precios y recursos para tu venta.</p>
+          <div className="tpv-index-welcome-copy">
+            <p className="tpv-index-section-kicker">
+              <IndexIcon name="compass" size={18} />
+              Ideas para tus viajeros
+            </p>
+            <h2>
+              ¡Qué gusto verte{agencyProfile?.commercialName ? `, ${agencyProfile.commercialName}` : ""}!
+            </h2>
+            <p>Encuentra experiencias, fechas y materiales para inspirar a tus clientes.</p>
+          </div>
+          <div className="tpv-index-welcome-mark" aria-hidden="true">
+            <IndexIcon name="compass" size={36} />
           </div>
         </div>
         <div className="tpv-index-filters" style={styles.filtersBox}>
@@ -939,7 +947,11 @@ function App() {
 
 <div className="tpv-index-results" style={styles.metaRow} role="status" aria-live="polite">
           <span style={styles.metaBadge}>
-            {toursFiltrados.length} experiencias encontradas
+            {loading
+              ? "Preparando el catálogo…"
+              : error
+                ? "No pudimos actualizar el catálogo"
+                : `${toursFiltrados.length} ${toursFiltrados.length === 1 ? "experiencia encontrada" : "experiencias encontradas"}`}
           </span>
           {(busqueda || estado) ? (
             <button
@@ -955,7 +967,7 @@ function App() {
           ) : null}
         </div>
 
-        {loading && <div style={styles.infoBox}>Cargando tours...</div>}
+        {loading && <div className="tpv-index-loading" style={styles.infoBox}>Preparando las experiencias para ti…</div>}
         {!loading && error && <div style={styles.errorBox}>{error}</div>}
 
         {!loading && !error && toursFiltrados.length === 0 && (
