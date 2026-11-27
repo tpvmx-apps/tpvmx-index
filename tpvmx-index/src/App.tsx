@@ -92,6 +92,7 @@ function formatAvailabilityDate(value: string) {
     weekday: "short",
     day: "2-digit",
     month: "short",
+    year: "numeric",
   }).format(new Date(timestamp));
 
   return formatted
@@ -150,16 +151,50 @@ function disponibilidadTexto(item: AvailabilityItem) {
   return item.status || "Consultar disponibilidad";
 }
 
-function esSinFecha(valor: string) {
-  const t = String(valor || "").toLowerCase().trim();
-  return (
-    !t ||
-    t.includes("definir") ||
-    t.includes("pendiente") ||
-    t.includes("pendientes") ||
-    t.includes("proximamente") ||
-    t.includes("próximamente")
+// Coincidir con el criterio del catálogo público: CONTROL describe el
+// producto; las fechas vigentes de los tours programados vienen de Supabase.
+function fechaIndicadaEnControl(tour: Tour): string {
+  return getField(tour, [
+    "FECHA BOT", "FECHA 1", "FECHA 0", "PRÓXIMAS_FECHAS", "PROXIMAS_FECHAS",
+  ]);
+}
+
+function claveOperativaDelTour(tour: Tour): string {
+  return normalizarClave(
+    getField(tour, ["CLAVE FIJA", "CLAVE_FIJA"]) || getField(tour, ["CLAVE"])
   );
+}
+
+function esTourRecurrente(tour: Tour): boolean {
+  const agenda = normalizarTexto(getField(tour, ["AGENDA"]));
+  const fechas = normalizarTexto(fechaIndicadaEnControl(tour));
+  return agenda.includes("todo el ano") || fechas.includes("salidas diarias");
+}
+
+function esTourDiarioCdmx(tour: Tour): boolean {
+  if (!esTourRecurrente(tour)) return false;
+  const estado = normalizarTexto(getField(tour, ["ESTADO"]));
+  return estado === "cdmx" || estado.includes("ciudad de mexico");
+}
+
+function tieneAnuncioSinFecha(tour: Tour): boolean {
+  // Nunca publicar como disponible un producto todavía anunciado como
+  // Próximamente / pendiente / por definir en su ficha comercial.
+  const texto = normalizarTexto(
+    [fechaIndicadaEnControl(tour), getField(tour, ["AGENDA"])].join(" ")
+  );
+  return ["proximamente", "pendiente", "por definir", "agotado"]
+    .some((marca) => texto.includes(marca));
+}
+
+function inicioDiaMexicoUtc(): number {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Mexico_City",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const numero = (tipo: "year" | "month" | "day") =>
+    Number(partes.find((p) => p.type === tipo)?.value || 0);
+  return Date.UTC(numero("year"), numero("month") - 1, numero("day"));
 }
 
 async function copiarTexto(texto: string, etiqueta: string): Promise<{ ok: boolean; message: string }> {
@@ -622,11 +657,6 @@ function App() {
     void cargarTours();
   }, [accessStatus, session]);
 
-  const estados = useMemo(() => {
-    return Array.from(
-      new Set(tours.map((tour) => getField(tour, ["ESTADO"])).filter(Boolean))
-    ).sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
-  }, [tours]);
    const plantillasActivas = useMemo(() => {
   return plantillasCanva
     .filter((item) => {
@@ -653,11 +683,7 @@ function App() {
 
   const disponibilidadPorClave = useMemo(() => {
     const mapa = new Map<string, AvailabilityItem[]>();
-    const todayUtc = Date.UTC(
-      new Date().getUTCFullYear(),
-      new Date().getUTCMonth(),
-      new Date().getUTCDate()
-    );
+    const todayUtc = inicioDiaMexicoUtc();
 
     disponibilidad.forEach((row) => {
       const key = normalizarClave(String(row.CLAVE || ""));
@@ -692,56 +718,73 @@ function App() {
     return mapa;
   }, [disponibilidad]);
 
+  const toursVendibles = useMemo(() => {
+    return tours.filter((tour) => {
+      const nombre = getField(tour, ["TOUR"]);
+      const clave = getField(tour, ["CLAVE FIJA", "CLAVE_FIJA", "CLAVE"]);
+      if (!nombre || !clave || normalizarClave(clave) === "P") return false;
+      if (tieneAnuncioSinFecha(tour)) return false;
+
+      // Las experiencias permanentes (todo el año/salidas diarias)
+      // se mantienen visibles, como en el catálogo de la web.
+      if (esTourRecurrente(tour)) return true;
+
+      // Para un tour con fecha, el único indicador para exhibirlo es
+      // una salida futura vigente en index_availability (Supabase).
+      const salidas = disponibilidadPorClave.get(claveOperativaDelTour(tour)) || [];
+      return salidas.some((salida) => salida.dateMs !== null);
+    });
+  }, [tours, disponibilidadPorClave]);
+
+  const estados = useMemo(() => {
+    return Array.from(
+      new Set(toursVendibles.map((tour) => getField(tour, ["ESTADO"])).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  }, [toursVendibles]);
+
   const toursFiltrados = useMemo(() => {
-    const filtrados = tours.filter((tour) => {
-      const texto = [
-        getField(tour, ["CLAVE"]),
+    const termino = normalizarTexto(busqueda);
+    const filtrados = toursVendibles.filter((tour) => {
+      const fechasVigentes = (disponibilidadPorClave.get(claveOperativaDelTour(tour)) || [])
+        .map((salida) => salida.date).join(" ");
+      const texto = normalizarTexto([
+        getField(tour, ["CLAVE", "CLAVE FIJA"]),
         getField(tour, ["TOUR"]),
         getField(tour, ["ESTADO"]),
-        getField(tour, [
-          "Fecha Bot",
-          "FECHA BOT",
-          "FECHA_BOT",
-          "PRÓXIMAS_FECHAS",
-        ]),
+        fechaIndicadaEnControl(tour),
+        fechasVigentes,
         getField(tour, ["NIVEL DE DIFICULTAD", "DIFICULTAD", "NIVEL", "AB"]),
-      ]
-        .join(" ")
-        .toLowerCase();
+      ].join(" "));
 
-      const coincideBusqueda = texto.includes(busqueda.toLowerCase());
-      const estadoTour = getField(tour, ["ESTADO"]);
-      const coincideEstado = estado === "" || estadoTour === estado;
-
+      const coincideBusqueda = !termino || texto.includes(termino);
+      const coincideEstado = !estado || getField(tour, ["ESTADO"]) === estado;
       return coincideBusqueda && coincideEstado;
     });
 
     return filtrados.sort((a, b) => {
-      const fechaA = getField(a, [
-        "Fecha Bot",
-        "FECHA BOT",
-        "FECHA_BOT",
-        "PRÓXIMAS_FECHAS",
-      ]);
-      const fechaB = getField(b, [
-        "Fecha Bot",
-        "FECHA BOT",
-        "FECHA_BOT",
-        "PRÓXIMAS_FECHAS",
-      ]);
+      // 1) Próximas salidas con fecha, en orden cronológico.
+      // 2) Otros productos permanentes.
+      // 3) Experiencias diarias de CDMX, siempre al final.
+      const grupo = (tour: Tour) =>
+        esTourDiarioCdmx(tour) ? 2 : esTourRecurrente(tour) ? 1 : 0;
+      const grupoA = grupo(a);
+      const grupoB = grupo(b);
+      if (grupoA !== grupoB) return grupoA - grupoB;
 
-      const sinFechaA = esSinFecha(fechaA);
-      const sinFechaB = esSinFecha(fechaB);
+      if (grupoA === 0) {
+        const ms = (tour: Tour) =>
+          disponibilidadPorClave.get(claveOperativaDelTour(tour))?.[0]?.dateMs
+          ?? Number.POSITIVE_INFINITY;
+        const fechaA = ms(a);
+        const fechaB = ms(b);
+        if (fechaA !== fechaB) return fechaA - fechaB;
+      }
 
-      if (sinFechaA && !sinFechaB) return 1;
-      if (!sinFechaA && sinFechaB) return -1;
-
-      const tourA = getField(a, ["TOUR"]);
-      const tourB = getField(b, ["TOUR"]);
-
-      return tourA.localeCompare(tourB, "es", { sensitivity: "base" });
+      return getField(a, ["TOUR"]).localeCompare(
+        getField(b, ["TOUR"]), "es", { sensitivity: "base" }
+      );
     });
-  }, [tours, busqueda, estado]);
+  }, [toursVendibles, disponibilidadPorClave, busqueda, estado]);
 
   if (!session) {
     return <LoginScreen />;
@@ -999,14 +1042,12 @@ function App() {
                   "AB",
                 ]) || "";
 
-              const fechas =
-                getField(tour, [
-                  "Fecha Bot",
-                  "FECHA BOT",
-                  "FECHA_BOT",
-                  "PRÓXIMAS_FECHAS",
-                  "PROXIMAS_FECHAS",
-                ]) || "Por definir";
+              const fechas = esTourRecurrente(tour)
+                ? fechaIndicadaEnControl(tour) || "Disponible todo el año"
+                : (disponibilidadPorClave.get(claveOperativaDelTour(tour)) || [])
+                    .filter((salida) => salida.dateMs !== null)
+                    .map((salida) => formatAvailabilityDate(salida.date))
+                    .join("\n");
 
               const precio = formatearMoneda(getField(tour, ["PRECIO", "O"]));
               const reserva = formatearMoneda(getField(tour, ["RESERVA", "P"]));
